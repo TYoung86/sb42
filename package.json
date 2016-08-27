@@ -1,0 +1,22 @@
+{
+  "name": "engine42",
+  "version": "0.0.1-alpha",
+  "description": "The server for Space Base 42",
+  "author": {
+    "name": "Tyler Young",
+    "email": "tyler.young@cimplx.com"
+  },
+  "homepage": "https://engine-fourty-two.arukascloud.io",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "main": "server.js",
+  "dependencies": {
+    "autocert": "^2.0.0",
+    "fs": "0.0.1-security",
+    "https": "^1.0.0",
+    "peer": "^0.2.8"
+  }
+}
