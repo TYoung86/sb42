@@ -1,5 +1,5 @@
 {
-  "name": "engine42",
+  "name": "sb42",
   "version": "0.0.1-alpha",
   "description": "The server for Space Base 42",
   "author": {
@@ -7,7 +7,7 @@
     "email": "tyler.young@cimplx.com"
   },
   "homepage": "https://engine-fourty-two.arukascloud.io",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0",
   "private": true,
   "scripts": {
     "start": "node server.js"
