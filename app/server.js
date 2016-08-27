@@ -22,7 +22,7 @@ var tlsOpts = autocert.tlsOpts({
 });
 
 https.createServer(tlsOpts, (req, res) => {
-  res.end('secure af');
+  res.end('is this thing on?');
 }).listen(443);
 
 peer.PeerServer({
