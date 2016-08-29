@@ -12,7 +12,7 @@ http.createServer((req, res) => {
     res.end(proof);
   } else {
     res.statusCode = 404;
-    res.end('not found');
+    res.end(JSON.stringify(challenges,null,"\t"));
   }
 }).listen(80);
  
