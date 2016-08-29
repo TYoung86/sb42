@@ -8,41 +8,45 @@ var fs = require('fs');
 var tls = require('tls');
 
 var challenges = {};
- 
+
 http.createServer((req, res) => {
-  var proof = challenges[req.url];
-  if (proof) {
-    console.log("Challenge request: %s", proof);
-    res.end(proof);
-  } else {
-    console.log("Insecure request: %s", req.address);
-    res.statusCode = 404;
-    res.end(JSON.stringify( { challenges } ,null,"\t"));
-  }
+	var proof = challenges[req.url];
+	if (proof) {
+		console.log("Challenge request: %s", proof);
+		res.end(proof);
+	} else {
+		console.log("Insecure request: %s", req.address);
+		res.statusCode = 404;
+		var destination = `https://${req.headers.host}/${req.address}`;
+		res.writeHead(302,{
+			'Location': destination
+		})
+		res.end(destination);
+	}
 }).listen(80);
 
 
 var autocertTlsOpts = autocert.tlsOpts({
-  email: pkgInfo.author.email,
-  challenges,
+	email: pkgInfo.author.email,
+	challenges,
 });
 
 var fallbackSCtx = new tls.createSecureContext({
-  pfx: fs.readFileSync('localhost.pfx')
+	pfx: fs.readFileSync('localhost.pfx')
 });
 
 var tlsOpts = {
-  SNICallback: (name, cb) => {
-    console.log("SNI request: %s", name);
-    return name === null || name === 'localhost' ? cb(null,fallbackSCtx) : tlsOpts.SNICallback(name, cb);
-  }
+	SNICallback: (name, cb) => {
+		console.log("SNI request: %s", name);
+		return name === null || name === 'localhost' ? cb(null,fallbackSCtx) : tlsOpts.SNICallback(name, cb);
+	}
 };
 
 https.createServer(tlsOpts, (req, res) => {
-  console.log("Secure request: %s", req.address);
-  res.end('is this thing on?');
+	console.log("Secure request: %s", req.address);
+	res.end('is this thing on?');
 }).listen(443);
 
 peer.PeerServer({
-  port: 9001, ssl: tlsOpts
+	port: 9001, ssl: tlsOpts
 }).on('connection', id => console.log("Peer request: %s", id));
