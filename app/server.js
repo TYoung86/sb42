@@ -12,11 +12,7 @@ http.createServer((req, res) => {
     res.end(proof);
   } else {
     res.statusCode = 404;
-<<<<<<< HEAD
     res.end(JSON.stringify( { challenges, tlsOpts } ,null,"\t"));
-=======
-    res.end(JSON.stringify(challenges,null,"\t"));
->>>>>>> 2bb1ed7203102a01cf25088a2395fb28fa7e3585
   }
 }).listen(80);
  
