@@ -1,4 +1,4 @@
-var package = require('./package.json');
+var pkgInfo = require('./package.json');
 var http = require('http');
 var https = require('https');
 var autocert = require('autocert');
@@ -17,7 +17,7 @@ http.createServer((req, res) => {
 }).listen(80);
  
 var tlsOpts = autocert.tlsOpts({
-  email: package.author.email,
+  email: pkgInfo.author.email,
   challenges,
 });
 
