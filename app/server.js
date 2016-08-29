@@ -39,7 +39,7 @@ var tlsOpts = {
 };
 
 https.createServer(tlsOpts, (req, res) => {
-  console.log("Secure request: %s", name);
+  console.log("Secure request: %s", req.address);
   res.end('is this thing on?');
 }).listen(443);
 
