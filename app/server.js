@@ -21,6 +21,8 @@ var tlsOpts = autocert.tlsOpts({
   challenges,
 });
 
+tlsOpts.pfx = fs.readFileSync('server.pfx');
+
 https.createServer(tlsOpts, (req, res) => {
   res.end('is this thing on?');
 }).listen(443);
