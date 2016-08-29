@@ -3,6 +3,7 @@ var http = require('http');
 var https = require('https');
 var autocert = require('autocert');
 var peer = require('peer');
+var fs = require('fs');
 
 var challenges = {};
  
