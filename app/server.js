@@ -1,52 +1,78 @@
 "use strict";
-var pkgInfo = require('./package.json');
-var http = require('http');
-var https = require('https');
-var autocert = require('autocert');
-var peer = require('peer');
-var fs = require('fs');
-var tls = require('tls');
+const pkgInfo = require('./package.json');
+const http = require('http');
+const https = require('https');
+const autocert = require('autocert');
+const peer = require('peer');
+const fs = require('fs');
+const tls = require('tls');
+const express = require('express');
+const peerServer = peer.ExpressPeerServer;
+const threads = require('webworker-threads');
+const randomstring = require('randomstring');
+const compression = require('compression');
 
-var challenges = {};
+const peerKey = randomstring.generate();
+
+const app = express();
+
+const fallbackSCtx = new tls.createSecureContext({
+	pfx: fs.readFileSync('localhost.pfx')
+});
+
+app.use(compression);
+
+var autocertChallenges = {};
+var autocertTlsOpts = autocert.tlsOpts({
+	email: pkgInfo.author.email,
+	autocertChallenges
+});
 
 http.createServer((req, res) => {
-	var proof = challenges[req.url];
+	var proof = autocertChallenges[req.url];
 	if (proof) {
-		console.log("Challenge request: %s", proof);
+		console.log('Challenge request: %s', proof);
 		res.end(proof);
 	} else {
-		console.log("Insecure request: %s", req.address);
-		res.statusCode = 404;
-		var destination = `https://${req.headers.host}/${req.address}`;
-		res.writeHead(302,{
+		console.log('Insecure request: %s %s', req.method, req.url);
+		var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
+		res.writeHead(307,{
 			'Location': destination
-		})
+		});
 		res.end(destination);
 	}
 }).listen(80);
 
 
-var autocertTlsOpts = autocert.tlsOpts({
-	email: pkgInfo.author.email,
-	challenges,
-});
-
-var fallbackSCtx = new tls.createSecureContext({
-	pfx: fs.readFileSync('localhost.pfx')
-});
-
-var tlsOpts = {
+const tlsOpts = {
 	SNICallback: (name, cb) => {
-		console.log("SNI request: %s", name);
-		return name === null || name === 'localhost' ? cb(null,fallbackSCtx) : tlsOpts.SNICallback(name, cb);
+		console.log('SNI request: %s', name);
+		return name === null || name === 'localhost'
+			? cb(null, fallbackSCtx)
+			: tlsOpts.SNICallback(name, cb);
 	}
 };
 
-https.createServer(tlsOpts, (req, res) => {
-	console.log("Secure request: %s", req.address);
-	res.end('is this thing on?');
+const server = https.createServer(tlsOpts, (req, res) => {
+	console.log('Secure request: %s %s', req.method, req.url);
+	return app(req,res);
 }).listen(443);
 
-peer.PeerServer({
-	port: 9001, ssl: tlsOpts
-}).on('connection', id => console.log("Peer request: %s", id));
+const stupidlyHigh = -1>>>1;
+
+app.use('/peers', peerServer(server, {
+	debug: false,
+	key: peerKey,
+	ip_limit: stupidlyHigh,
+	concurrent_limit: stupidlyHigh,
+	timeout: 10000
+}));
+
+app.all('/lost', (req, res, next) => {
+	res.status(403)
+
+});
+
+app.use('/public', express.static('public'));
+
+
