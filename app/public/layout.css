@@ -1,0 +1,38 @@
+.header-padding {
+	height: calc( 4em + 8px );
+	visibility: hidden;
+}
+
+.dropdown-alt {
+	position: relative;
+}
+
+.dropdown-menu.bg-inverse>.dropdown-item {
+	color: #eceeef;
+	background-color: #373a3c;
+}
+
+.dropdown-menu.bg-inverse>.dropdown-item:focus,
+.dropdown-menu.bg-inverse>.dropdown-item:hover {
+	color: #f5f5f5;
+	text-decoration: none;
+	background-color: #2b2d2f;
+}
+
+.dropdown-alt>.dropdown-menu {
+	transition: max-height 0.1s, padding 0.1s, visibility 0.3s 0s;
+	visibility: collapse;
+	margin: 0;
+	border: 0;
+	padding: 0;
+	max-height: 0;
+	display: block;
+	overflow: hidden;
+	border-radius: 2px;
+}
+
+.open>.dropdown-menu {
+	visibility: visible;
+	max-height: 100vh;
+	padding: 5px 0;
+}

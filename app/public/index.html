@@ -1,12 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="stylesheet" href="index.css">
-<script src="modernizr-engine42.js"></script>
-<script src="index.js"></script>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
+	<link rel="stylesheet" href="https://gitcdn.xyz/repo/mdbootstrap/bootstrap-material-design/master/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="https://gitcdn.xyz/repo/mdbootstrap/bootstrap-material-design/master/css/mdb.min.css" />
+	<link rel="stylesheet" href="layout.css">
 </head>
 <body>
+
+	<header>
+		<nav class="navbar navbar-dark navbar-fixed-top scrolling-navbar bg-inverse">
+			<div class="container">
+				<a class="navbar-brand" href="https://sb42.life/">SB42</a>
+				<ul class="nav navbar-nav nav-flex-icons">
+					<li class="nav-item">
+						<a class="nav-link" title="Help"><i class="fa fa-question" aria-hidden="true"></i></a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" title="Share"><i class="fa fa-share-alt" aria-hidden="true"></i></a>
+					</li>
+					<li class="nav-item dropdown-alt">
+						<a class="nav-link" title="Actions" id="actions-menu-button"
+						        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<i class="fa fa-bars" aria-hidden="true"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right bg-inverse" aria-labelledby="actions-menu-button">
+							<li class="dropdown-item">
+								<img class="img-circle" src="https://www.gravatar.com/avatar/0000000000000000000000000000000?s=36" alt="Profile Picture" />
+								<span><strong>Your Name</strong></span>
+							</li>
+							<li class="dropdown-divider" role="separator"></li>
+							<li class="dropdown-item">
+								<a>
+									<i class="fa fa-group" aria-hidden="true" title="Associations"></i>
+									Associations
+								</a>
+							</li>
+							<li class="dropdown-item">
+								<a>
+									<i class="fa fa-cog" aria-hidden="true" title="Settings"></i>
+									Settings
+								</a>
+							</li>
+							<li class="dropdown-divider" role="separator"></li>
+							<li class="dropdown-item">
+								<a>
+									<i class="fa fa-sign-out" aria-hidden="true" title="Logout"></i>
+									Logout
+								</a>
+							</li>
+							<li class="dropdown-item">
+								<a>
+									<i class="fa fa-sign-in" aria-hidden="true" title="Login"></i>
+									Login
+								</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</header>
+	<div class="header-padding"></div>
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12">
+				<div class="card">
+					<div class="view overlay hm-white-slight">
+						<img src="http://mdbootstrap.com/images/reg/reg%20(2).jpg" class="img-fluid" alt="">
+						<a>
+							<div class="mask"></div>
+						</a>
+					</div>
+					<div class="card-block">
+						<h4 class="card-title">Card title</h4>
+						<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+						<a class="btn btn-primary">Button</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="modernizr-engine42.js"></script>
+	<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+	<script src="https://gitcdn.xyz/repo/mdbootstrap/bootstrap-material-design/master/js/tether.min.js"></script>
+	<script src="https://gitcdn.xyz/repo/mdbootstrap/bootstrap-material-design/master/js/bootstrap.min.js"></script>
+	<script src="https://gitcdn.xyz/repo/mdbootstrap/bootstrap-material-design/master/js/mdb.min.js"></script>
+	<script src="index.js"></script>
 </body>
 </html>
