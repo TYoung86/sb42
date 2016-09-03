@@ -14,6 +14,7 @@
   },
   "main": "server.js",
   "dependencies": {
+    "aes-gcm-stream": "^2.1.0",
     "autocert": "^2.0.0",
     "compression": "^1.6.2",
     "ejs": "^2.5.1",
@@ -23,7 +24,6 @@
     "passport-google-oauth20": "^1.0.0",
     "peer": "^0.2.8",
     "randomstring": "^1.1.5",
-    "session-file-store": "^0.2.1",
-    "webworker-threads": "^0.7.8"
+    "session-file-store": "^0.2.1"
   }
 }

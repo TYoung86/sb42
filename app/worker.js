@@ -16,6 +16,7 @@ const GooglePassportStrategy = require('passport-google-oauth20').Strategy;
 const peerKey = process.env.peerKey;
 const sessionKey = process.env.sessionKey;
 const ejs = require('ejs');
+const aesgcm = require('aes-gcm-stream');
 
 //noinspection JSUnresolvedVariable
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
@@ -142,15 +143,14 @@ passport.use(new GooglePassportStrategy({
 		callbackURL: "https://sb42.life/auth/google/callback"
 	},
 	function(accessToken, refreshToken, profile, done) {
-		session.
-		User.findOrCreate({
-			id: profile.id,
+		var id = profile.id;
+		var data = {
 			email:profile.email,
 			name: profile.name,
-			icon: profile._json['picture']
-		}, function (err, user) {
-			return done(err, user);
-		});
+			icon: profile._json['picture'],
+			created: Date.UTC
+		};
+		// TODO: save
 	}
 ));
 
