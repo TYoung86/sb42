@@ -42,6 +42,7 @@ const usersKey = process.env.usersKey;
 const ejs = require('ejs');
 const aesGcm = require('aes-gcm-stream');
 const cbor = require('cbor');
+const hsts = require('strict-transport-security');
 
 //noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
@@ -53,13 +54,12 @@ const localhostSCtx = new tls.createSecureContext({
 	pfx: fs.readFileSync('localhost.pfx')
 });
 
-var insecureResponses = {
-	'/robots.txt' : 'User-agent: *\nDisallow: /\n'
+var autoCertChallenges = {
 };
 
 const autoCertTlsOpts = autoCert.tlsOpts({
 	email: pkgInfo.author.email,
-	challenges: insecureResponses
+	challenges: autoCertChallenges
 });
 
 const localCerts = () => {
@@ -143,6 +143,8 @@ function User(profile, accessToken, refreshToken, done) {
 			: done(null, user));
 }
 
+const robotsTxt = 'User-agent: *\nDisallow: /\n';
+
 app.engine('html', ejs.renderFile);
 app.set('views', __dirname + '/private');
 app.set('view options', {layout: false});
@@ -170,26 +172,47 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-
+app.use(hsts.getSTS({"max-age":{days:90}}));
 
 http.createServer((req, res) => {
-	var proof = insecureResponses[req.url];
-	if (proof) {
-		console.log('Challenge request from %s: %s %s',
-			req.connection.remoteAddress, req.method, req.url);
-		console.log('Challenge proof: %s', JSON.stringify(proof));
-		res.setHeader('Content-Type', 'text/plain');
-		res.statusCode = 200;
-		res.statusMessage = 'Challenge Accepted';
-		res.end(proof);
-	} else {
-		console.log('Insecure request from %s: %s %s',
-			req.connection.remoteAddress, req.method, req.url);
-		var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
-		res.writeHead(307, 'Challenge Denied', {
-			'Location': destination
-		});
-		res.end(destination);
+	switch ( req.url ) {
+		case '/robots.txt': {
+			console.log('Robots.txt request from %s: %s',
+				req.connection.remoteAddress, req.method);
+			res.setHeader('Content-Type', 'text/plain');
+			res.statusCode = 200;
+			res.statusMessage = 'Hello Robot';
+			res.end(robotsTxt);
+		}
+		case '/favicon.ico': {
+			console.log('Favicon request from %s: %s',
+				req.connection.remoteAddress, req.method);
+			var destination = `https://${req.headers.host}${req.url}`;
+			res.writeHead(307, 'Upgrade Your Security', {
+				'Location': destination
+			});
+			res.end(destination);
+		}
+		default: {
+			var proof = autoCertChallenges[req.url];
+			if (proof) {
+				console.log('Challenge request from %s: %s %s',
+					req.connection.remoteAddress, req.method, req.url);
+				console.log('Challenge proof: %s', JSON.stringify(proof));
+				res.setHeader('Content-Type', 'text/plain');
+				res.statusCode = 200;
+				res.statusMessage = 'Challenge Accepted';
+				res.end(proof);
+			} else {
+				console.log('Insecure request from %s: %s %s',
+					req.connection.remoteAddress, req.method, req.url);
+				var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
+				res.writeHead(307, 'You Seem To Be Lost', {
+					'Location': destination
+				});
+				res.end(destination);
+			}
+		}
 	}
 }).listen(80);
 
@@ -212,7 +235,7 @@ app.use('/peers', peerServer(server, {
 app.all('/lost', (req, res, next) => {
 	res.status(403);
 	res.sendFile('./private/lost.html');
-	next();
+	res.end();
 });
 
 const aesGcmConfig = {
@@ -238,12 +261,14 @@ app.get('/auth/google/callback',
 	passport.authenticate('google', { failureRedirect: '/login' }),
 	(req, res)=>{
 		res.redirect('/');
+		res.end();
 	});
 
 app.get('/logout',
 	(req, res)=>{
 		req.logout();
 		res.redirect('/');
+		res.end();
 	});
 
 app.use('/public', express.static('public'));
@@ -251,6 +276,8 @@ app.use('/public', express.static('public'));
 app.get('/robots.txt',
 	(req, res) => {
 		res.setHeader('Content-Type', 'text/plain');
-		res.send(new Buffer(insecureResponses['/robots.txt']));
+		res.send(new Buffer(autoCertChallenges['/robots.txt']));
+		res.end(robotsTxt);
 	});
+
 
