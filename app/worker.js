@@ -32,7 +32,8 @@ const peer = require('peer');
 const tls = require('tls');
 const express = require('express');
 const peerServer = peer.ExpressPeerServer;
-const compression = require('compression');
+//const compression = require('compression');
+const shrinkRay = require('shrink-ray');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
@@ -225,33 +226,53 @@ const robotsTxt = 'User-agent: *\nDisallow: /\n';
 //app.set('views', './views');
 //app.set('view options', {layout: false});
 
-app.use(compression);
-/*
-
- const aDayInSeconds = 86400;
-app.use(session({
-	secret: sessionKey,
-	resave: false,
-	cookie: {
-		secure: true,
-		httpOnly: true,
-		sameSite: true,
-	},
-	store: new FileStore({
-		ttl: aDayInSeconds,
-		reapInterval: aDayInSeconds,
-		reapAsync: true,
-		reapSyncFallback: true,
-		encrypt: true
-	}),
-	rolling: true,
-	saveUninitialized: false,
+//app.use(compression);
+app.use(shrinkRay({
+	zlib: {
+		chunkSize: 64 * 1024
+	}
 }));
+app.use((req,res,next) => {
+	if ( res.flush ) {
+		let flushing = true;
+		const finishFlushing = () => flushing = false;
+		res.on('finish', finishFlushing);
+		res.on('close', finishFlushing);
+		let interval = setInterval(() => {
+			if (flushing)
+				try { res.flush(); }
+				catch ( err ) { clearInterval(interval); }
+			else clearInterval(interval);
+		}, 100);
+		next();
+	}
+});
+	/*
 
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(hsts.getSTS({"max-age":{days:90}}));
-*/
+	 const aDayInSeconds = 86400;
+	app.use(session({
+		secret: sessionKey,
+		resave: false,
+		cookie: {
+			secure: true,
+			httpOnly: true,
+			sameSite: true,
+		},
+		store: new FileStore({
+			ttl: aDayInSeconds,
+			reapInterval: aDayInSeconds,
+			reapAsync: true,
+			reapSyncFallback: true,
+			encrypt: true
+		}),
+		rolling: true,
+		saveUninitialized: false,
+	}));
+
+	app.use(passport.initialize());
+	app.use(passport.session());
+	app.use(hsts.getSTS({"max-age":{days:90}}));
+	*/
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
