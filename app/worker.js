@@ -176,7 +176,7 @@ http.createServer((req, res) => {
 	var proof = insecureResponses[req.url];
 	if (proof) {
 		console.log('Challenge request: %s', proof);
-		res.header('Content-Type', 'text/plain');
+		res.setHeader('Content-Type', 'text/plain');
 		res.send(new Buffer(proof));
 		res.end();
 	} else {
@@ -245,7 +245,7 @@ app.use('/public', express.static('public'));
 
 app.get('/robots.txt',
 	(req, res) => {
-		res.header('Content-Type', 'text/plain');
+		res.setHeader('Content-Type', 'text/plain');
 		res.send(new Buffer(insecureResponses['/robots.txt']));
 	});
 
