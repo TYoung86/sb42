@@ -260,6 +260,7 @@ http.createServer((req, res) => {
 			res.statusCode = 200;
 			res.statusMessage = 'Hello Robot';
 			res.setHeader('Content-Type', 'text/plain');
+			res.setHeader('Upgrade-Insecure-Requests', 1);
 			res.end(robotsTxt);
 			break;
 		}
@@ -268,6 +269,7 @@ http.createServer((req, res) => {
 				req.connection.remoteAddress, req.method);
 			const destination = `https://${req.headers.host}${req.url}`;
 			res.writeHead(307, 'Upgrade Your Security', {
+				'Upgrade-Insecure-Requests': 1,
 				'Location': destination
 			});
 			res.end(destination);
@@ -280,7 +282,7 @@ http.createServer((req, res) => {
 				if ( !checkAgainstDomainSuffixWhitelist(host) ) {
 					console.log('Bad host request from %s: %s %s %s',
 						req.connection.remoteAddress, req.method, host, req.url);
-					res.writeHead(400, 'This Is Not Me');
+					res.writeHead(400,'This Is Not Me', { 'Upgrade-Insecure-Requests': 1 });
 					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}.\n` +
 						"Please check your DNS settings, and (if debugging) confirm you did not manually specify your host header or add an entry to your hosts file.");
 					break;
@@ -290,6 +292,7 @@ http.createServer((req, res) => {
 					req.connection.remoteAddress, req.method, req.url);
 				const destination = `https://${req.headers.host}/lost/?r=${encodeURIComponent(req.url)}`;
 				res.writeHead(307, 'You Seem To Be Lost', {
+					'Upgrade-Insecure-Requests': 1,
 					'Location': destination
 				});
 				res.end(destination);
@@ -304,6 +307,7 @@ http.createServer((req, res) => {
 				res.statusCode = 200;
 				res.statusMessage = 'Challenge Accepted';
 				res.setHeader('Content-Type', 'text/plain');
+				res.setHeader('Upgrade-Insecure-Requests', 1);
 				fs.readFile(challengeFile, (err, data) => {
 					console.log('Challenge response: %s', JSON.stringify(data.toString()));
 					res.end(data);
