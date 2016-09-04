@@ -120,7 +120,7 @@ function dynamicSniCallback(name, cb) {
 						fs.writeFile(`./challenges/${path}`, data, err => done());
 					}
 				};
-				if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
+				if ( !checkAgainstDomainSuffixWhitelist(name) ) {
 					console.log("Well that's embarrassing...");
 				}
 				letiny.getCert(letinyOptions, err=>{
