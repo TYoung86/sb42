@@ -15,7 +15,6 @@
   "main": "server.js",
   "dependencies": {
     "aes-gcm-stream": "^2.1.0",
-    "autocert": "^2.0.0",
     "cbor": "^1.0.6",
     "compression": "^1.6.2",
     "ejs": "^2.5.1",
@@ -27,6 +26,7 @@
     "promisify-node": "^0.4.0",
     "randomstring": "^1.1.5",
     "session-file-store": "^0.2.1",
-    "strict-transport-security": "^0.2.0"
+    "strict-transport-security": "^0.2.0",
+    "letiny": "latest"
   }
 }

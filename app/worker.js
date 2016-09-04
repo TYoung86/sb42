@@ -26,7 +26,7 @@ const promisify = require('promisify-node');
 const pfs = promisify('fs');
 const http = require('http');
 const https = require('https');
-const autoCert = require('autocert');
+const letiny = require('letiny');
 const peer = require('peer');
 const tls = require('tls');
 const express = require('express');
@@ -50,21 +50,9 @@ const app = express();
 
 app.set('view engine', 'ejs');
 
-const localhostSCtx = new tls.createSecureContext({
-	pfx: fs.readFileSync('localhost.pfx')
-});
-
-var autoCertChallenges = {
-};
-
-const autoCertTlsOpts = autoCert.tlsOpts({
-	email: pkgInfo.author.email,
-	challenges: autoCertChallenges
-});
-
 const localCerts = () => {
 	var certsFound = {};
-	for ( const fileName of fs.readdirSync('./') ) {
+	for ( const fileName of fs.readdirSync('./certs/') ) {
 		var name;
 		if (fileName.endsWith('.crt') || fileName.endsWith('.cer')) {
 			name = fileName.slice(0, -4);
@@ -86,15 +74,42 @@ const fallbackSCtx = getFirstValue(localCerts);
 
 const tlsOpts = {
 	SNICallback: (name, cb) => {
-		console.log('SNI request: %s', name);
 		// will I need wildcard support?
-		return name === null
-			? cb(null, fallbackSCtx || localhostSCtx)
-			: name === 'localhost'
-			? cb(null, localhostSCtx || fallbackSCtx)
-			: name in localCerts
-				? cb(null, localCerts[name])
-				: autoCertTlsOpts.SNICallback(name, cb);
+		switch ( name ) {
+			case null: {
+				console.log('Fallback SNI request');
+				cb(null, fallbackSCtx || localhostSCtx);
+				break;
+			}
+			case 'localhost': {
+				console.log('Localhost SNI request');
+				cb(null, localhostSCtx || fallbackSCtx);
+				break;
+			}
+			default: {
+				if ( name in localCerts ) {
+					console.log('Local Cert SNI request: %s', name);
+					cb(null, localCerts[name]);
+				} else {
+					console.log('Let\'s Encrypt SNI request: %s', name);
+					letiny.getCert({
+						email: pkgInfo.author.email,
+						domains: name,
+						certFile: __dirname + '/certs/'
+						challenge: function(domain, path, data, done) {
+							// make http://+domain+path serving "data"
+							done();
+						},
+						agreeTerms:true
+					}, function(err, cert, key, caCert, accountKey) {
+						console.log(err || cert+'\n'+key+'\n'+caCert);
+					});
+
+					autoCertTlsOpts.SNICallback(name, cb)
+				}
+				break;
+			}
+		}
 	}
 };
 
