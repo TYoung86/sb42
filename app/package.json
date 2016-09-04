@@ -20,13 +20,14 @@
     "ejs": "^2.5.1",
     "express": "latest",
     "express-session": "^1.14.1",
+    "letiny": "latest",
     "passport": "^0.3.2",
     "passport-google-oauth20": "^1.0.0",
     "peer": "^0.2.8",
     "promisify-node": "^0.4.0",
     "randomstring": "^1.1.5",
     "session-file-store": "^0.2.1",
-    "strict-transport-security": "^0.2.0",
-    "letiny": "latest"
+    "spdy": "^3.4.0",
+    "strict-transport-security": "^0.2.0"
   }
 }

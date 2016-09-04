@@ -43,6 +43,7 @@ const ejs = require('ejs');
 const aesGcm = require('aes-gcm-stream');
 const cbor = require('cbor');
 const hsts = require('strict-transport-security');
+const spdy = require('spdy');
 
 //noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
@@ -53,67 +54,88 @@ app.set('view engine', 'ejs');
 const localCerts = () => {
 	var certsFound = {};
 	for ( const fileName of fs.readdirSync('./certs/') ) {
-		var name;
-		if (fileName.endsWith('.crt') || fileName.endsWith('.cer')) {
-			name = fileName.slice(0, -4);
-			var keyFileName = name + '.key';
-			if (fs.accessSync(keyFileName, fs.constants.R_OK))
-				certsFound[name] = new tls.createSecureContext
-				({ cert: fs.readFileSync(fileName), key: fs.readFileSync(keyFileName) });
-		}
-		else if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
-			name = fileName.slice(0, -4);
-			certsFound[name] = new tls.createSecureContext
-			({ pfx: fs.readFileSync(fileName) });
+		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
+			const name = fileName.slice(0, -4);
+			fs.readFile(fileName, (err,data) => {
+				if (err) throw err;
+				certsFound[name] = new tls.createSecureContext({ pfx: data });
+			});
 		}
 	}
 	return certsFound;
 };
-
+const localhostSCtx = localCerts['localhost'];
 const fallbackSCtx = getFirstValue(localCerts);
+const acmeChallengePathPrefix = '/.well-known/acme-challenge/';
 
-const tlsOpts = {
-	SNICallback: (name, cb) => {
-		// will I need wildcard support?
-		switch ( name ) {
-			case null: {
-				console.log('Fallback SNI request');
-				cb(null, fallbackSCtx || localhostSCtx);
-				break;
-			}
-			case 'localhost': {
-				console.log('Localhost SNI request');
-				cb(null, localhostSCtx || fallbackSCtx);
-				break;
-			}
-			default: {
-				if ( name in localCerts ) {
-					console.log('Local Cert SNI request: %s', name);
-					cb(null, localCerts[name]);
-				} else {
-					console.log('Let\'s Encrypt SNI request: %s', name);
-					letiny.getCert({
-						email: pkgInfo.author.email,
-						domains: name,
-						certFile: __dirname + '/certs/'
-						challenge: function(domain, path, data, done) {
-							// make http://+domain+path serving "data"
-							done();
-						},
-						agreeTerms:true
-					}, function(err, cert, key, caCert, accountKey) {
-						console.log(err || cert+'\n'+key+'\n'+caCert);
+function dynamicSniCallback(name, cb) {
+// will I need wildcard support?
+	switch (name) {
+		case null: {
+			console.log('Fallback SNI request');
+			cb(null, fallbackSCtx || localhostSCtx);
+			break;
+		}
+		case 'localhost': {
+			console.log('Localhost SNI request');
+			cb(null, localhostSCtx || fallbackSCtx);
+			break;
+		}
+		default: {
+			if (name in localCerts) {
+				console.log('Local Cert SNI request: %s', name);
+				cb(null, localCerts[name]);
+			} else {
+				console.log('Let\'s Encrypt SNI request: %s', name);
+				const email = pkgInfo.author.email;
+				const privateKey = `${__dirname}/certs/${name}.key`;
+				const accountKey = `${__dirname}/certs/${email}.key`;
+				const pfxFile = `${__dirname}/certs/${name}.pfx`;
+				letiny.getCert({
+					email: pkgInfo.author.email,
+					domains: [name],
+					privateKey,
+					accountKey,
+					pfxFile,
+					aes: true, fork: false, agreeTerms: true,
+					url: 'https://acme-staging.api.letsencrypt.org',
+					challenge: (domain, path, data, done) => {
+						if (path.startsWith(acmeChallengePathPrefix))
+							path = path.substr(acmeChallengePathPrefix.length);
+						else
+							throw new Error(`Path does not begin with expected prefix.\n${path}`);
+						if (path.includes('/'))
+							throw new Error(`Path includes slashes after removing prefix.\n${path}`);
+						fs.writeFile(`./challenges/${path}`, data, err => done());
+					}
+				}, err=>{
+					if (err) throw err;
+					fs.access(pfxFile, fs.constants.R_OK, err => {
+						fs.readFile(pfxFile, (err, data) => {
+							if (err) throw err;
+							localCerts[name] = new tls.createSecureContext({pfx: data});
+							cb(null, localCerts[name]);
+						});
 					});
-
-					autoCertTlsOpts.SNICallback(name, cb)
-				}
-				break;
+				});
 			}
+			break;
 		}
 	}
+}
+
+const spdyOptions = {
+	spdy: {
+		ssl: true, plain: false,
+		maxChunk: 64 * 1024,
+		maxStreams: require('os').cpus().length * 4
+	},
+	SNICallback: dynamicSniCallback
 };
 
 const aDayInSeconds = 86400;
+
+function noop() {}
 
 function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
@@ -204,7 +226,7 @@ http.createServer((req, res) => {
 		case '/favicon.ico': {
 			console.log('Favicon request from %s: %s',
 				req.connection.remoteAddress, req.method);
-			var destination = `https://${req.headers.host}${req.url}`;
+			const destination = `https://${req.headers.host}${req.url}`;
 			res.writeHead(307, 'Upgrade Your Security', {
 				'Location': destination
 			});
@@ -212,30 +234,40 @@ http.createServer((req, res) => {
 			break;
 		}
 		default: {
-			var proof = autoCertChallenges[req.url];
-			if (proof) {
-				console.log('Challenge request from %s: %s %s',
-					req.connection.remoteAddress, req.method, req.url);
-				console.log('Challenge proof: %s', JSON.stringify(proof));
-				res.statusCode = 200;
-				res.statusMessage = 'Challenge Accepted';
-				res.setHeader('Content-Type', 'text/plain');
-				res.end(proof);
-			} else {
+			var path = req.url;
+			if ( !path.startsWith(acmeChallengePathPrefix) ) {
 				console.log('Lost request from %s: %s %s',
 					req.connection.remoteAddress, req.method, req.url);
-				var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
+				const destination = `https://${req.headers.host}/lost/?r=${encodeURIComponent(req.url)}`;
 				res.writeHead(307, 'You Seem To Be Lost', {
 					'Location': destination
 				});
 				res.end(destination);
+				break;
 			}
+			console.log('Challenge request from %s: %s %s',
+				req.connection.remoteAddress, req.method, req.url);
+			path = path.substr(acmeChallengePathPrefix.length);
+			const challengeFile = `./challenges/${path}`;
+			fs.access(challengeFile, fs.constants.R_OK, err => {
+				if (err) throw err;
+				console.log('Challenge proof: %s', JSON.stringify(proof));
+				res.statusCode = 200;
+				res.statusMessage = 'Challenge Accepted';
+				res.setHeader('Content-Type', 'text/plain');
+				fs.readFile(challengeFile, (err, data) => {
+					res.end(data);
+					fs.unlink(challengeFile, err => {
+						if (err) throw err;
+					});
+				});
+			});
 			break;
 		}
 	}
 }).listen(80);
 
-const server = https.createServer(tlsOpts, (req,res) => {
+const server = spdy.createServer(spdyOptions, (req, res) => {
 	console.log('Secure request from %s: %s %s',
 		req.connection.remoteAddress, req.method, req.url);
 	return app(req,res);
@@ -251,11 +283,12 @@ app.use('/peers', peerServer(server, {
 	timeout: 10000
 }));
 
-app.all('/lost', (req, res, next) => {
+app.all('/lost/*', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
 		req.connection.remoteAddress, req.method, req.url);
 	res.status(403);
 	res.render('lost');
+	next();
 });
 
 const aesGcmConfig = {
