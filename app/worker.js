@@ -225,7 +225,7 @@ const robotsTxt = 'User-agent: *\nDisallow: /\n';
 //app.set('views', './views');
 //app.set('view options', {layout: false});
 
-//app.use(compression);
+app.use(compression);
 /*
 
  const aDayInSeconds = 86400;
