@@ -1,16 +1,24 @@
 "use strict";
 
 function getFirstKey(obj) {
-	//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
-	for (const k in obj)
-		//noinspection JSUnfilteredForInLoop
-		return k;
+	try {
+		//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
+		for (const k in obj)
+			//noinspection JSUnfilteredForInLoop
+			return k;
+	} catch ( err ) {
+		return undefined;
+	}
 }
 function getFirstValue(obj) {
-	//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
-	for (const v of obj)
-		//noinspection JSUnfilteredForInLoop
-		return v;
+	try {
+		//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
+		for (const v of obj)
+			//noinspection JSUnfilteredForInLoop
+			return v;
+	} catch ( err ) {
+		return undefined;
+	}
 }
 
 const fs = require('fs');
@@ -78,9 +86,9 @@ const tlsOpts = {
 		console.log('SNI request: %s', name);
 		// will I need wildcard support?
 		return name === null
-			? cb(null, localhostSCtx)
+			? cb(null, fallbackSCtx || localhostSCtx)
 			: name === 'localhost'
-			? cb(null, fallbackSCtx)
+			? cb(null, localhostSCtx)
 			: localCerts[name]
 		|| autoCertTlsOpts.SNICallback(name, cb);
 	}
