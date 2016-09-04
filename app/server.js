@@ -2,25 +2,18 @@
 
 const cluster = require('cluster');
 
-function getFirstKey(obj) {
-	//noinspection LoopStatementThatDoesntLoopJS
-	for (const k in obj) return k;
-}
-function getFirstValue(obj) {
-	//noinspection LoopStatementThatDoesntLoopJS
-	for (const v of obj) return v;
-}
 
 if (cluster.isMaster) (()=> {
 	const fs = require('fs');
+	const aesGcm = require('aes-gcm-stream');
 	const randomString = require('randomstring');
 	const cpuCount = require('os').cpus().length;
 
-	function readOrCreateKeyFile(keyFileName) {
+	function readOrCreateKeyFile(keyFileName, generator) {
 		const hasKeyFile = fs.existsSync(keyFileName);
 		const keyValue =  hasKeyFile
 			? fs.readFileSync(keyFileName, {encoding:'utf-8'})
-			: randomString.generate();
+			: generator ? generator() : randomString.generate();
 		if ( !hasKeyFile )
 			fs.writeFileSync(keyFileName, keyValue, {encoding:'utf-8'});
 		return keyValue;
@@ -28,7 +21,8 @@ if (cluster.isMaster) (()=> {
 
 	const shared = {
 		peerKey : readOrCreateKeyFile('peer.key'),
-		sessionKey: readOrCreateKeyFile('session.key')
+		sessionKey: readOrCreateKeyFile('session.key'),
+		userKey: readOrCreateKeyFile('users.key', aesGcm.createEncodedKey),
 	};
 
 	function spawnWorker() {
@@ -39,4 +33,4 @@ if (cluster.isMaster) (()=> {
 
 	for (var i = 0; i < cpuCount; ++i) spawnWorker();
 })();
-else require('worker');
+else require('./worker.js');

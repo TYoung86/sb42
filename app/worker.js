@@ -1,6 +1,21 @@
 "use strict";
 
+function getFirstKey(obj) {
+	//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
+	for (const k in obj)
+		//noinspection JSUnfilteredForInLoop
+		return k;
+}
+function getFirstValue(obj) {
+	//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
+	for (const v of obj)
+		//noinspection JSUnfilteredForInLoop
+		return v;
+}
+
 const fs = require('fs');
+const promisify = require('promisify-node');
+const pfs = promisify('fs');
 const http = require('http');
 const https = require('https');
 const autoCert = require('autocert');
@@ -15,10 +30,12 @@ const passport = require('passport');
 const GooglePassportStrategy = require('passport-google-oauth20').Strategy;
 const peerKey = process.env.peerKey;
 const sessionKey = process.env.sessionKey;
+const usersKey = process.env.usersKey;
 const ejs = require('ejs');
-const aesgcm = require('aes-gcm-stream');
+const aesGcm = require('aes-gcm-stream');
+const cbor = require('cbor');
 
-//noinspection JSUnresolvedVariable
+//noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
 const app = express();
 
@@ -41,7 +58,7 @@ const localCerts = () => {
 		if (fileName.endsWith('.crt') || fileName.endsWith('.cer')) {
 			name = fileName.slice(0, -4);
 			var keyFileName = name + '.key';
-			if (fs.existsSync(keyFileName))
+			if (fs.accessSync(keyFileName, fs.constants.R_OK))
 				certsFound[name] = new tls.createSecureContext
 				({ cert: fs.readFileSync(fileName), key: fs.readFileSync(keyFileName) });
 		}
@@ -71,35 +88,77 @@ const tlsOpts = {
 
 const aDayInSeconds = 86400;
 
-app.configure(function() {
-	app.engine('html', ejs.renderFile);
-	app.set('views', __dirname + '/private');
-	app.set('view options', {layout: false});
 
-	app.use(compression);
+function User(profile, accessToken, refreshToken, done) {
+	if ( !done )
+		return new Promise( (res,rej) => User( profile,
+			(err,obj) => (err?rej:res)({err, obj}) ) );
+	var isUpdate = typeof profile === 'object';
+	var id = isUpdate ? profile.id : profile;
+	isUpdate = isUpdate && Object.keys(profile).length > 0;
+	var now = Date.UTC;
+	var updatedUser = profile ? {
+		accessToken,
+		refreshToken,
+		email: profile.email,
+		name: profile.name,
+		picture: profile._json['picture'],
+		modified: now
+	} : {};
+	var filePath = './users/'+id;
+	pfs.access(filePath, fs.constants.R_OK)
+		.then(err => err ? Promise.resolve({})
+			: new Promise((resolve,reject) => {
+			var cborDecoder = new cbor.Decoder();
+			cborDecoder.on('complete', obj => resolve(obj) );
+			cborDecoder.on('error', obj => reject(obj) );
+			try {
+				fs.createReadStream(filePath)
+					.pipe(aesGcm.decrypt(aesGcmConfig))
+					.pipe(cborDecoder);
+			} catch ( err ) {
+				reject(err);
+			}
+		}))
+		.then(readUser => Object.setPrototypeOf(
+			Object.assign(
+				{created:now},
+				readUser,
+				updatedUser),
+			{id}))
+		.then(user => isUpdate
+			? pfs.writeFile(filePath, cbor.encode(Object.setPrototypeOf(user, null)),
+			err => done(err, user))
+			: done(null, user));
+}
 
-	app.use(session({
-		secret: sessionKey,
-		resave: false,
-		cookie: {
-			secure: true,
-			httpOnly: true,
-			sameSite: true,
-		},
-		store: new FileStore({
-			ttl: aDayInSeconds,
-			reapInterval: aDayInSeconds,
-			reapAsync: true,
-			reapSyncFallback: true,
-			encrypt: true
-		}),
-		rolling: true,
-		saveUninitialized: false,
-	}));
+app.engine('html', ejs.renderFile);
+app.set('views', __dirname + '/private');
+app.set('view options', {layout: false});
 
-	app.use(passport.initialize());
-	app.use(passport.session());
-});
+app.use(compression);
+
+app.use(session({
+	secret: sessionKey,
+	resave: false,
+	cookie: {
+		secure: true,
+		httpOnly: true,
+		sameSite: true,
+	},
+	store: new FileStore({
+		ttl: aDayInSeconds,
+		reapInterval: aDayInSeconds,
+		reapAsync: true,
+		reapSyncFallback: true,
+		encrypt: true
+	}),
+	rolling: true,
+	saveUninitialized: false,
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 
 http.createServer((req, res) => {
@@ -134,25 +193,19 @@ app.use('/peers', peerServer(server, {
 
 app.all('/lost', (req, res, next) => {
 	res.status(403);
-	res.sendFile('public/lost.html');
+	res.sendFile('./private/lost.html');
+	next();
 });
+
+const aesGcmConfig = {
+	key: usersKey
+};
 
 passport.use(new GooglePassportStrategy({
 		clientID: process.env.GOOGLE_CLIENT_ID,
 		clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 		callbackURL: "https://sb42.life/auth/google/callback"
-	},
-	function(accessToken, refreshToken, profile, done) {
-		var id = profile.id;
-		var data = {
-			email:profile.email,
-			name: profile.name,
-			icon: profile._json['picture'],
-			created: Date.UTC
-		};
-		// TODO: save
-	}
-));
+	}, User ));
 
 app.get('/auth/google',
 	passport.authenticate('google', {
