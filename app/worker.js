@@ -183,6 +183,7 @@ http.createServer((req, res) => {
 			res.statusCode = 200;
 			res.statusMessage = 'Hello Robot';
 			res.end(robotsTxt);
+			break;
 		}
 		case '/favicon.ico': {
 			console.log('Favicon request from %s: %s',
@@ -192,6 +193,7 @@ http.createServer((req, res) => {
 				'Location': destination
 			});
 			res.end(destination);
+			break;
 		}
 		default: {
 			var proof = autoCertChallenges[req.url];
@@ -212,6 +214,7 @@ http.createServer((req, res) => {
 				});
 				res.end(destination);
 			}
+			break;
 		}
 	}
 }).listen(80);
