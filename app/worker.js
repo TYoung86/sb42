@@ -356,7 +356,7 @@ http.createServer((req, res) => {
 const server = spdy.createServer(spdyOptions, app).listen(443);
 
 const stupidlyHigh = -1>>>1;
-/*
+
 app.use('/peers', peerServer(server, {
 	debug: false,
 	key: peerKey,
@@ -364,7 +364,7 @@ app.use('/peers', peerServer(server, {
 	concurrent_limit: stupidlyHigh,
 	timeout: 10000
 }));
-*/
+
 app.all('*', (req,res,next) => {
 
 	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
