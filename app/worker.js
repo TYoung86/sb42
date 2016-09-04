@@ -46,6 +46,8 @@ const aesGcm = require('aes-gcm-stream');
 const cbor = require('cbor');
 const hsts = require('strict-transport-security');
 const spdy = require('spdy');
+const waitOn = promisify(require('wait-on'));
+
 
 //noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
@@ -54,6 +56,7 @@ const app = express();
 //app.set('view engine', 'ejs');
 
 function updateLocalCerts() {
+	const reads = [];
 	for (const fileName of fs.readdirSync('./certs/')) {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
@@ -62,13 +65,21 @@ function updateLocalCerts() {
 				continue;
 			}
 			console.log("Found local certificate for %s", name);
-			fs.readFile(`./certs/${fileName}`, (err, data) => {
-				if (err) throw err;
-				console.log("Created secure context for %s", name);
-				localCerts[name] = new tls.createSecureContext({pfx: data});
-			});
+			reads.push(name({
+					resources: [ pfxFile ],
+					interval: 10,
+					timeout: 60000,
+					window: 100
+				})
+				.then(() => pfs.readFile(`./certs/${fileName}`))
+				.then((data) => {
+					console.log("Created secure context for %s", name);
+					localCerts[name] = new tls.createSecureContext({pfx: data});
+				})
+			);
 		}
 	}
+	return Promise.all(reads);
 }
 
 const localCerts = {};
@@ -83,6 +94,7 @@ const domainSuffixWhitelist = [
 ];
 
 function checkAgainstDomainSuffixWhitelist(host) {
+	if ( typeof host !== 'string' ) return false;
 	return domainSuffixWhitelist.some( domainSuffix =>
 		host === domainSuffix || host.endsWith('.'+domainSuffix) )
 }
@@ -106,52 +118,69 @@ function dynamicSniCallback(name, cb) {
 					console.log('Local Cert SNI request: %s', name);
 					cb(null, localCerts[name]);
 				} else {
-					console.log("Let's Encrypt SNI request: %s", name);
 					const email = pkgInfo.author.email;
 					const privateKey = `${__dirname}/certs/${name}.key`;
 					const accountKey = `${__dirname}/certs/${email}.key`;
 					const pfxFile = `${__dirname}/certs/${name}.pfx`;
-					//noinspection JSUnusedGlobalSymbols
-					const letinyOptions = {
-						email: pkgInfo.author.email,
-						domains: [name],
-						privateKey,
-						accountKey,
-						pfxFile,
-						aes: true, fork: false, agreeTerms: true,
-						// url: 'https://acme-staging.api.letsencrypt.org',
-						challenge: (domain, path, data, done) => {
-							console.log("Saving Let's Encrypt challenge...");
-							if (path.startsWith(acmeChallengePathPrefix))
-								path = path.substr(acmeChallengePathPrefix.length);
-							else
-								throw new Error(`Path does not begin with expected prefix.\n${path}`);
-							if (path.includes('/'))
-								throw new Error(`Path includes slashes after removing prefix.\n${path}`);
-							fs.writeFile(`./challenges/${path}`, data, err => {
+					const lockFile = `${__dirname}/certs/${name}.lock`;
+					pfs.access(lockFile, fs.constants.R_OK)
+						.then( () => {
+							console.log("Waiting on existing Let's Encrypt SNI request: %s", name);
+							return updateLocalCerts()
+								.then(() => {
+									if ( name in localCerts ) {
+										console.log("Satisfied Let's Encrypt SNI request from local storage: %s", name);
+										cb(null, localCerts[name]);
+									} else
+										throw new Error('Timed out waiting for certificate to appear.')
+								});
+						})
+						.catch( err => {
+							fs.closeSync(fs.openSync(lockFile, 'a'));
+							console.log("Let's Encrypt SNI request: %s", name);
+							//noinspection JSUnusedGlobalSymbols
+							const letinyOptions = {
+								email: pkgInfo.author.email,
+								domains: [name],
+								privateKey,
+								accountKey,
+								pfxFile,
+								aes: true, fork: false, agreeTerms: true,
+								// url: 'https://acme-staging.api.letsencrypt.org',
+								challenge: (domain, path, data, done) => {
+									console.log("Saving Let's Encrypt challenge...");
+									if (path.startsWith(acmeChallengePathPrefix))
+										path = path.substr(acmeChallengePathPrefix.length);
+									else
+										throw new Error(`Path does not begin with expected prefix.\n${path}`);
+									if (path.includes('/'))
+										throw new Error(`Path includes slashes after removing prefix.\n${path}`);
+									fs.writeFile(`./challenges/${path}`, data, err => {
+										if (err) throw err;
+										done();
+										console.log("Saved Let's Encrypt challenge...");
+									});
+								}
+							};
+							if (!checkAgainstDomainSuffixWhitelist(name)) {
+								console.log("Well that's embarrassing...");
+							}
+							letiny.getCert(letinyOptions, err=> {
 								if (err) throw err;
-								done();
-								console.log("Saved Let's Encrypt challenge...");
+								console.log("Accessing saved Let's Encrypt challenge...");
+								fs.access(pfxFile, fs.constants.R_OK, err => {
+									if (err) throw err;
+									console.log("Reading saved Let's Encrypt challenge...");
+									fs.readFile(pfxFile, (err, data) => {
+										if (err) throw err;
+										console.log("Answering Let's Encrypt challenge...");
+										localCerts[name] = new tls.createSecureContext({pfx: data});
+										cb(null, localCerts[name]);
+										release();
+									});
+								});
 							});
-						}
-					};
-					if (!checkAgainstDomainSuffixWhitelist(name)) {
-						console.log("Well that's embarrassing...");
-					}
-					letiny.getCert(letinyOptions, err=> {
-						if (err) throw err;
-						console.log("Accessing saved Let's Encrypt challenge...");
-						fs.access(pfxFile, fs.constants.R_OK, err => {
-							if (err) throw err;
-							console.log("Reading saved Let's Encrypt challenge...");
-							fs.readFile(pfxFile, (err, data) => {
-								if (err) throw err;
-								console.log("Answering Let's Encrypt challenge...");
-								localCerts[name] = new tls.createSecureContext({pfx: data});
-								cb(null, localCerts[name]);
-							});
-						});
-					});
+						})
 				}
 			} catch (err) {
 				console.error(err.stack);
@@ -435,6 +464,32 @@ app.get('/robots.txt',
 		res.send(new Buffer(robotsTxt));
 	});
 
+app.get('/favicon.ico',
+	(req, res) => {
+		console.log('Secure favicon.ico request from %s',
+			req.connection.remoteAddress);
+		res.setHeader('Content-Type', 'image/x-icon');
+		res.sendFile('./public/favicon.ico', )
+	});
+
 app.use('/public', express.static('public'));
 
 
+// must be last
+app.use(function(req, res){
+	res.status(404);
+
+	// respond with json
+	if (req.accepts('json')) {
+		res.send({error:{status:{code:404,message:'Not Found'}},reason:'Request not handled.'});
+		return;
+	}
+	// respond with json
+	if (req.accepts('xml')) {
+		res.send('<?xml version="1.0"?><error><status code="404"><message>Not Found</message></status><reason>Request not handled.</reason></error>');
+		return;
+	}
+
+	// default to plain-text. send()
+	res.type('txt').send('404 Not Found\nRequest not handled.');
+});
