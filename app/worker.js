@@ -32,8 +32,8 @@ const peer = require('peer');
 const tls = require('tls');
 const express = require('express');
 const peerServer = peer.ExpressPeerServer;
-//const compression = require('compression');
-const shrinkRay = require('shrink-ray');
+const compression = require('compression');
+//const shrinkRay = require('shrink-ray');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
@@ -226,12 +226,16 @@ const robotsTxt = 'User-agent: *\nDisallow: /\n';
 //app.set('views', './views');
 //app.set('view options', {layout: false});
 
-//app.use(compression);
+app.use(compression({
+	chunkSize: 64 * 1024
+}));
+/*
 app.use(shrinkRay({
 	zlib: {
 		chunkSize: 64 * 1024
 	}
 }));
+*/
 app.use((req,res,next) => {
 	if ( res.flush ) {
 		let flushing = true;
