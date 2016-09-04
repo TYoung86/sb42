@@ -1,5 +1,6 @@
 "use strict";
 
+//noinspection JSUnusedLocalSymbols
 function getFirstKey(obj) {
 	try {
 		//noinspection LoopStatementThatDoesntLoopJS,UnnecessaryLocalVariableJS
@@ -67,6 +68,14 @@ const localCerts = () => {
 const localhostSCtx = localCerts['localhost'];
 const fallbackSCtx = getFirstValue(localCerts);
 const acmeChallengePathPrefix = '/.well-known/acme-challenge/';
+const domainSuffixWhitelist = [
+	'sb42.life'
+];
+
+function checkAgainstDomainSuffixWhitelist(host) {
+	return domainSuffixWhitelist.some( domainSuffix =>
+		host === domainSuffix || host.endsWith('.'+domainSuffix) )
+}
 
 function dynamicSniCallback(name, cb) {
 // will I need wildcard support?
@@ -91,14 +100,15 @@ function dynamicSniCallback(name, cb) {
 				const privateKey = `${__dirname}/certs/${name}.key`;
 				const accountKey = `${__dirname}/certs/${email}.key`;
 				const pfxFile = `${__dirname}/certs/${name}.pfx`;
-				letiny.getCert({
+				//noinspection JSUnusedGlobalSymbols
+				const letinyOptions = {
 					email: pkgInfo.author.email,
 					domains: [name],
 					privateKey,
 					accountKey,
 					pfxFile,
 					aes: true, fork: false, agreeTerms: true,
-					url: 'https://acme-staging.api.letsencrypt.org',
+					// url: 'https://acme-staging.api.letsencrypt.org',
 					challenge: (domain, path, data, done) => {
 						console.log("Saving Let's Encrypt challenge...");
 						if (path.startsWith(acmeChallengePathPrefix))
@@ -109,7 +119,11 @@ function dynamicSniCallback(name, cb) {
 							throw new Error(`Path includes slashes after removing prefix.\n${path}`);
 						fs.writeFile(`./challenges/${path}`, data, err => done());
 					}
-				}, err=>{
+				};
+				if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
+					console.log("Well that's embarrassing...");
+				}
+				letiny.getCert(letinyOptions, err=>{
 					if (err) throw err;
 					console.log("Accessing saved Let's Encrypt challenge...");
 					fs.access(pfxFile, fs.constants.R_OK, err => {
@@ -240,8 +254,17 @@ http.createServer((req, res) => {
 			break;
 		}
 		default: {
-			var path = req.url;
-			if ( !path.startsWith(acmeChallengePathPrefix) ) {
+			const fullPath = req.url;
+			if ( !fullPath.startsWith(acmeChallengePathPrefix) ) {
+				if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
+					console.log('Bad host request from %s: %s %s',
+						req.connection.remoteAddress, req.method, req.url);
+					res.writeHead(400, 'This Is Not Me');
+					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. ` +
+						"Please check your DNS settings, and (if debugging) confirm you did not manually specify your host header or add an entry to your hosts file.");
+					break;
+				}
+
 				console.log('Lost request from %s: %s %s',
 					req.connection.remoteAddress, req.method, req.url);
 				const destination = `https://${req.headers.host}/lost/?r=${encodeURIComponent(req.url)}`;
@@ -253,7 +276,7 @@ http.createServer((req, res) => {
 			}
 			console.log('Challenge request from %s: %s %s',
 				req.connection.remoteAddress, req.method, req.url);
-			path = path.substr(acmeChallengePathPrefix.length);
+			const path = fullPath.substr(acmeChallengePathPrefix.length);
 			const challengeFile = `./challenges/${path}`;
 			fs.access(challengeFile, fs.constants.R_OK, err => {
 				if (err) throw err;
@@ -261,10 +284,11 @@ http.createServer((req, res) => {
 				res.statusMessage = 'Challenge Accepted';
 				res.setHeader('Content-Type', 'text/plain');
 				fs.readFile(challengeFile, (err, data) => {
-					console.log('Challenge response: %s', JSON.stringify(data));
+					console.log('Challenge response: %s', JSON.stringify(data.toString()));
 					res.end(data);
 					fs.unlink(challengeFile, err => {
 						if (err) throw err;
+						console.log('Challenge cleaned up.');
 					});
 				});
 			});
@@ -272,12 +296,12 @@ http.createServer((req, res) => {
 		}
 	}
 }).listen(80);
-
-const server = spdy.createServer(spdyOptions, (req, res) => {
-	console.log('Secure request from %s: %s %s',
-		req.connection.remoteAddress, req.method, req.url);
-	return app(req,res);
-}).listen(443);
+/*(req, res) => {
+ console.log('Secure request from %s: %s %s',
+ req.connection.remoteAddress, req.method, req.url);
+ return app(req,res);
+ }*/
+const server = spdy.createServer(spdyOptions, app).listen(443);
 
 const stupidlyHigh = -1>>>1;
 
@@ -288,6 +312,25 @@ app.use('/peers', peerServer(server, {
 	concurrent_limit: stupidlyHigh,
 	timeout: 10000
 }));
+
+app.all('*', (req,res,next) => {
+
+	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
+		console.log('Bad host request from %s: %s %s',
+			req.connection.remoteAddress, req.method, req.url);
+		res.statusCode = 400;
+		res.statusMessage = 'This Is Not Me';
+		res.setHeader('Content-Type', 'text/plain');
+		res.send(`This is not ${req.headers.host}.\n` +
+			`This is ${domainSuffixWhitelist[0]}.\n` +
+			"Please check your DNS settings.\n" +
+			"We got a security certificate certifying we're this host just to safely tell you we're not this host.\n" +
+			"Stay in school. Don't do hard drugs.\n" +
+			"Fix your stuff.");
+		//res.end();
+	}
+	else next();
+});
 
 app.all('/lost/*', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
@@ -332,7 +375,6 @@ app.get('/logout',
 		res.redirect('/');
 	});
 
-app.use('/public', express.static('public'));
 
 app.get('/robots.txt',
 	(req, res) => {
@@ -341,5 +383,7 @@ app.get('/robots.txt',
 		res.setHeader('Content-Type', 'text/plain');
 		res.send(new Buffer(robotsTxt));
 	});
+
+app.use('/public', express.static('public'));
 
 
