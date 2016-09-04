@@ -61,7 +61,7 @@ function updateLocalCerts() {
 				continue;
 			}
 			console.log("Found local certificate for %s", name);
-			fs.readFile(fileName, (err, data) => {
+			fs.readFile(`./certs/${fileName}`, (err, data) => {
 				if (err) throw err;
 				console.log("Created secure context for %s", name);
 				localCerts[name] = new tls.createSecureContext({pfx: data});
