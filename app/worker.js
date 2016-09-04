@@ -56,7 +56,7 @@ const localhostSCtx = new tls.createSecureContext({
 var autoCertChallenges = {};
 const autoCertTlsOpts = autoCert.tlsOpts({
 	email: pkgInfo.author.email,
-	autoCertChallenges
+	challenges: autoCertChallenges
 });
 
 const localCerts = () => {
