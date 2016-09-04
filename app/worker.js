@@ -238,3 +238,9 @@ app.get('/logout',
 
 app.use('/public', express.static('public'));
 
+app.get('/robots.txt',
+	(req, res) => {
+		res.set('Content-Type', 'text/plain');
+		res.send(new Buffer('User-agent: *\nDisallow: /\n'));
+	});
+
