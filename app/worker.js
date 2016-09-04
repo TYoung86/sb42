@@ -57,8 +57,10 @@ const localCerts = () => {
 	for ( const fileName of fs.readdirSync('./certs/') ) {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
+			console.log("Found local certificate for %s", name);
 			fs.readFile(fileName, (err,data) => {
 				if (err) throw err;
+				console.log("Created secure context for %s", name);
 				certsFound[name] = new tls.createSecureContext({ pfx: data });
 			});
 		}
