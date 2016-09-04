@@ -218,7 +218,7 @@ http.createServer((req, res) => {
 
 const server = https.createServer(tlsOpts, (req,res) => {
 	console.log('Secure request from %s: %s %s',
-		req.connection.socket.remoteAddress, req.method, req.url);
+		req.connection.remoteAddress, req.method, req.url);
 	return app(req,res);
 }).listen(443);
 
