@@ -175,13 +175,16 @@ app.use(passport.session());
 http.createServer((req, res) => {
 	var proof = insecureResponses[req.url];
 	if (proof) {
-		console.log('Challenge request: %s', proof);
+		console.log('Challenge request from %s: %s %s',
+			req.connection.remoteAddress, req.method, req.url);
+		console.log('Challenge proof: %s', JSON.stringify(proof));
 		res.setHeader('Content-Type', 'text/plain');
 		res.statusCode = 200;
 		res.statusMessage = 'Challenge Accepted';
 		res.end(proof);
 	} else {
-		console.log('Insecure request: %s %s', req.method, req.url);
+		console.log('Insecure request from %s: %s %s',
+			req.connection.remoteAddress, req.method, req.url);
 		var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
 		res.writeHead(307, 'Challenge Denied', {
 			'Location': destination
@@ -190,7 +193,11 @@ http.createServer((req, res) => {
 	}
 }).listen(80);
 
-const server = https.createServer(tlsOpts, app).listen(443);
+const server = https.createServer(tlsOpts, (req,res) => {
+	console.log('Secure request from %s: %s %s',
+		req.connection.socket.remoteAddress, req.method, req.url);
+	return app(req,res);
+}).listen(443);
 
 const stupidlyHigh = -1>>>1;
 
