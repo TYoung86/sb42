@@ -48,7 +48,7 @@ const hsts = require('strict-transport-security');
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
 const app = express();
 
-// app.set('view engine', 'html');
+app.set('view engine', 'ejs');
 
 const localhostSCtx = new tls.createSecureContext({
 	pfx: fs.readFileSync('localhost.pfx')
@@ -100,7 +100,6 @@ const tlsOpts = {
 
 const aDayInSeconds = 86400;
 
-
 function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
 		return new Promise( (res,rej) => User( profile,
@@ -108,6 +107,7 @@ function User(profile, accessToken, refreshToken, done) {
 	var isUpdate = typeof profile === 'object';
 	var id = isUpdate ? profile.id : profile;
 	isUpdate = isUpdate && Object.keys(profile).length > 0;
+	console.log('User profile %s: %s', isUpdate ? 'update' : 'access',  id);
 	var now = Date.UTC;
 	var updatedUser = profile ? {
 		accessToken,
@@ -146,9 +146,9 @@ function User(profile, accessToken, refreshToken, done) {
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
 
-app.engine('html', ejs.renderFile);
-app.set('views', __dirname + '/private');
-app.set('view options', {layout: false});
+//app.engine('html', ejs.renderFile);
+//app.set('views', './views');
+//app.set('view options', {layout: false});
 
 app.use(compression);
 
@@ -240,7 +240,7 @@ app.all('/lost', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
 		req.connection.remoteAddress, req.method, req.url);
 	res.status(403);
-	res.sendFile('./private/lost.html');
+	res.render('lost');
 });
 
 const aesGcmConfig = {
