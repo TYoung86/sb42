@@ -284,7 +284,7 @@ http.createServer((req, res) => {
 					console.log('Bad host request from %s: %s %s %s',
 						req.connection.remoteAddress, req.method, host, req.url);
 					res.writeHead(400,'This Is Not Me', { 'Upgrade-Insecure-Requests': 1 });
-					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}.\n` +
+					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
 						"Please check your DNS settings, and (if debugging) confirm you did not manually specify your host header or add an entry to your hosts file.");
 					break;
 				}
@@ -347,9 +347,9 @@ app.all('*', (req,res,next) => {
 		res.statusCode = 400;
 		res.statusMessage = 'This Is Not Me';
 		res.setHeader('Content-Type', 'text/plain');
-		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}.\n` +
-			"Please check your DNS configuration. You probably have a bad A record.\n" +
-			"We got a security certificate certifying we're this host just to safely tell you we're not this host.\n" +
+		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
+			"Please check your DNS configuration. Someone typed an A record IP wrong.\n" +
+			"We got a security certificate certifying we're these guys just to safely tell you we're not.\n" +
 			"Stay in school. Don't do hard drugs. Fix your stuff, guy.\n");
 		//res.end();
 		res.end();
