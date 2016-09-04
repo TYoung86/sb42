@@ -238,7 +238,6 @@ app.use('/peers', peerServer(server, {
 app.all('/lost', (req, res, next) => {
 	res.status(403);
 	res.sendFile('./private/lost.html');
-	res.end();
 });
 
 const aesGcmConfig = {
@@ -264,14 +263,12 @@ app.get('/auth/google/callback',
 	passport.authenticate('google', { failureRedirect: '/login' }),
 	(req, res)=>{
 		res.redirect('/');
-		res.end();
 	});
 
 app.get('/logout',
 	(req, res)=>{
 		req.logout();
 		res.redirect('/');
-		res.end();
 	});
 
 app.use('/public', express.static('public'));
@@ -279,8 +276,7 @@ app.use('/public', express.static('public'));
 app.get('/robots.txt',
 	(req, res) => {
 		res.setHeader('Content-Type', 'text/plain');
-		res.send(new Buffer(autoCertChallenges['/robots.txt']));
-		res.end(robotsTxt);
+		res.send(new Buffer(robotsTxt));
 	});
 
 
