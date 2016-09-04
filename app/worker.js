@@ -91,52 +91,58 @@ function dynamicSniCallback(name, cb) {
 			break;
 		}
 		default: {
-			if (name in localCerts) {
-				console.log('Local Cert SNI request: %s', name);
-				cb(null, localCerts[name]);
-			} else {
-				console.log("Let's Encrypt SNI request: %s", name);
-				const email = pkgInfo.author.email;
-				const privateKey = `${__dirname}/certs/${name}.key`;
-				const accountKey = `${__dirname}/certs/${email}.key`;
-				const pfxFile = `${__dirname}/certs/${name}.pfx`;
-				//noinspection JSUnusedGlobalSymbols
-				const letinyOptions = {
-					email: pkgInfo.author.email,
-					domains: [name],
-					privateKey,
-					accountKey,
-					pfxFile,
-					aes: true, fork: false, agreeTerms: true,
-					// url: 'https://acme-staging.api.letsencrypt.org',
-					challenge: (domain, path, data, done) => {
-						console.log("Saving Let's Encrypt challenge...");
-						if (path.startsWith(acmeChallengePathPrefix))
-							path = path.substr(acmeChallengePathPrefix.length);
-						else
-							throw new Error(`Path does not begin with expected prefix.\n${path}`);
-						if (path.includes('/'))
-							throw new Error(`Path includes slashes after removing prefix.\n${path}`);
-						fs.writeFile(`./challenges/${path}`, data, err => done());
+			try {
+				if (name in localCerts) {
+					console.log('Local Cert SNI request: %s', name);
+					cb(null, localCerts[name]);
+				} else {
+					console.log("Let's Encrypt SNI request: %s", name);
+					const email = pkgInfo.author.email;
+					const privateKey = `${__dirname}/certs/${name}.key`;
+					const accountKey = `${__dirname}/certs/${email}.key`;
+					const pfxFile = `${__dirname}/certs/${name}.pfx`;
+					//noinspection JSUnusedGlobalSymbols
+					const letinyOptions = {
+						email: pkgInfo.author.email,
+						domains: [name],
+						privateKey,
+						accountKey,
+						pfxFile,
+						aes: true, fork: false, agreeTerms: true,
+						// url: 'https://acme-staging.api.letsencrypt.org',
+						challenge: (domain, path, data, done) => {
+							console.log("Saving Let's Encrypt challenge...");
+							if (path.startsWith(acmeChallengePathPrefix))
+								path = path.substr(acmeChallengePathPrefix.length);
+							else
+								throw new Error(`Path does not begin with expected prefix.\n${path}`);
+							if (path.includes('/'))
+								throw new Error(`Path includes slashes after removing prefix.\n${path}`);
+							fs.writeFile(`./challenges/${path}`, data, err => done());
+						}
+					};
+					if (!checkAgainstDomainSuffixWhitelist(name)) {
+						console.log("Well that's embarrassing...");
 					}
-				};
-				if ( !checkAgainstDomainSuffixWhitelist(name) ) {
-					console.log("Well that's embarrassing...");
-				}
-				letiny.getCert(letinyOptions, err=>{
-					if (err) throw err;
-					console.log("Accessing saved Let's Encrypt challenge...");
-					fs.access(pfxFile, fs.constants.R_OK, err => {
+					letiny.getCert(letinyOptions, err=> {
 						if (err) throw err;
-						console.log("Reading saved Let's Encrypt challenge...");
-						fs.readFile(pfxFile, (err, data) => {
+						console.log("Accessing saved Let's Encrypt challenge...");
+						fs.access(pfxFile, fs.constants.R_OK, err => {
 							if (err) throw err;
-							console.log("Answering Let's Encrypt challenge...");
-							localCerts[name] = new tls.createSecureContext({pfx: data});
-							cb(null, localCerts[name]);
+							console.log("Reading saved Let's Encrypt challenge...");
+							fs.readFile(pfxFile, (err, data) => {
+								if (err) throw err;
+								console.log("Answering Let's Encrypt challenge...");
+								localCerts[name] = new tls.createSecureContext({pfx: data});
+								cb(null, localCerts[name]);
+							});
 						});
 					});
-				});
+				}
+			} catch (err) {
+				console.error(err.stack);
+				console.log('Fallback SNI request due to error');
+				cb(null, fallbackSCtx || localhostSCtx);
 			}
 			break;
 		}
@@ -257,11 +263,12 @@ http.createServer((req, res) => {
 		default: {
 			const fullPath = req.url;
 			if ( !fullPath.startsWith(acmeChallengePathPrefix) ) {
-				if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
-					console.log('Bad host request from %s: %s %s',
-						req.connection.remoteAddress, req.method, req.url);
+				const host = req.headers.host;
+				if ( !checkAgainstDomainSuffixWhitelist(host) ) {
+					console.log('Bad host request from %s: %s %s %s',
+						req.connection.remoteAddress, req.method, host, req.url);
 					res.writeHead(400, 'This Is Not Me');
-					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. ` +
+					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}.\n` +
 						"Please check your DNS settings, and (if debugging) confirm you did not manually specify your host header or add an entry to your hosts file.");
 					break;
 				}
