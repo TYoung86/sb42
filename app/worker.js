@@ -91,9 +91,10 @@ const tlsOpts = {
 		return name === null
 			? cb(null, fallbackSCtx || localhostSCtx)
 			: name === 'localhost'
-			? cb(null, localhostSCtx)
-			: localCerts[name]
-		|| autoCertTlsOpts.SNICallback(name, cb);
+			? cb(null, localhostSCtx || fallbackSCtx)
+			: name in localCerts
+				? cb(null, localCerts[name])
+				: autoCertTlsOpts.SNICallback(name, cb);
 	}
 };
 
@@ -179,9 +180,9 @@ http.createServer((req, res) => {
 		case '/robots.txt': {
 			console.log('Robots.txt request from %s: %s',
 				req.connection.remoteAddress, req.method);
-			res.setHeader('Content-Type', 'text/plain');
 			res.statusCode = 200;
 			res.statusMessage = 'Hello Robot';
+			res.setHeader('Content-Type', 'text/plain');
 			res.end(robotsTxt);
 			break;
 		}
@@ -201,12 +202,12 @@ http.createServer((req, res) => {
 				console.log('Challenge request from %s: %s %s',
 					req.connection.remoteAddress, req.method, req.url);
 				console.log('Challenge proof: %s', JSON.stringify(proof));
-				res.setHeader('Content-Type', 'text/plain');
 				res.statusCode = 200;
 				res.statusMessage = 'Challenge Accepted';
+				res.setHeader('Content-Type', 'text/plain');
 				res.end(proof);
 			} else {
-				console.log('Insecure request from %s: %s %s',
+				console.log('Lost request from %s: %s %s',
 					req.connection.remoteAddress, req.method, req.url);
 				var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
 				res.writeHead(307, 'You Seem To Be Lost', {
@@ -236,6 +237,8 @@ app.use('/peers', peerServer(server, {
 }));
 
 app.all('/lost', (req, res, next) => {
+	console.log('Lost request from %s: %s %s',
+		req.connection.remoteAddress, req.method, req.url);
 	res.status(403);
 	res.sendFile('./private/lost.html');
 });
@@ -262,11 +265,15 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
 	passport.authenticate('google', { failureRedirect: '/login' }),
 	(req, res)=>{
+		console.log('Google authentication callback request from %s',
+			req.connection.remoteAddress);
 		res.redirect('/');
 	});
 
 app.get('/logout',
 	(req, res)=>{
+		console.log('Logout request from %s',
+			req.connection.remoteAddress);
 		req.logout();
 		res.redirect('/');
 	});
@@ -275,6 +282,8 @@ app.use('/public', express.static('public'));
 
 app.get('/robots.txt',
 	(req, res) => {
+		console.log('Secure robots.txt request from %s',
+			req.connection.remoteAddress);
 		res.setHeader('Content-Type', 'text/plain');
 		res.send(new Buffer(robotsTxt));
 	});
