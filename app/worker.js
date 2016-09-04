@@ -190,10 +190,7 @@ http.createServer((req, res) => {
 	}
 }).listen(80);
 
-const server = https.createServer(tlsOpts, (req, res) => {
-	console.log('Secure request: %s %s', req.method, req.url);
-	return app(req,res);
-}).listen(443);
+const server = https.createServer(tlsOpts, app).listen(443);
 
 const stupidlyHigh = -1>>>1;
 
