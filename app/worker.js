@@ -86,7 +86,7 @@ function dynamicSniCallback(name, cb) {
 				console.log('Local Cert SNI request: %s', name);
 				cb(null, localCerts[name]);
 			} else {
-				console.log('Let\'s Encrypt SNI request: %s', name);
+				console.log("Let's Encrypt SNI request: %s", name);
 				const email = pkgInfo.author.email;
 				const privateKey = `${__dirname}/certs/${name}.key`;
 				const accountKey = `${__dirname}/certs/${email}.key`;
@@ -100,6 +100,7 @@ function dynamicSniCallback(name, cb) {
 					aes: true, fork: false, agreeTerms: true,
 					url: 'https://acme-staging.api.letsencrypt.org',
 					challenge: (domain, path, data, done) => {
+						console.log("Saving Let's Encrypt challenge...");
 						if (path.startsWith(acmeChallengePathPrefix))
 							path = path.substr(acmeChallengePathPrefix.length);
 						else
@@ -110,9 +111,13 @@ function dynamicSniCallback(name, cb) {
 					}
 				}, err=>{
 					if (err) throw err;
+					console.log("Accessing saved Let's Encrypt challenge...");
 					fs.access(pfxFile, fs.constants.R_OK, err => {
+						if (err) throw err;
+						console.log("Reading saved Let's Encrypt challenge...");
 						fs.readFile(pfxFile, (err, data) => {
 							if (err) throw err;
+							console.log("Answering Let's Encrypt challenge...");
 							localCerts[name] = new tls.createSecureContext({pfx: data});
 							cb(null, localCerts[name]);
 						});
@@ -135,6 +140,7 @@ const spdyOptions = {
 
 const aDayInSeconds = 86400;
 
+//noinspection JSUnusedLocalSymbols
 function noop() {}
 
 function User(profile, accessToken, refreshToken, done) {
@@ -251,11 +257,11 @@ http.createServer((req, res) => {
 			const challengeFile = `./challenges/${path}`;
 			fs.access(challengeFile, fs.constants.R_OK, err => {
 				if (err) throw err;
-				console.log('Challenge proof: %s', JSON.stringify(proof));
 				res.statusCode = 200;
 				res.statusMessage = 'Challenge Accepted';
 				res.setHeader('Content-Type', 'text/plain');
 				fs.readFile(challengeFile, (err, data) => {
+					console.log('Challenge response: %s', JSON.stringify(data));
 					res.end(data);
 					fs.unlink(challengeFile, err => {
 						if (err) throw err;
