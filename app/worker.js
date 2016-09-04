@@ -50,23 +50,30 @@ const spdy = require('spdy');
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
 const app = express();
 
-app.set('view engine', 'ejs');
+//app.set('view engine', 'ejs');
 
-const localCerts = () => {
-	var certsFound = {};
-	for ( const fileName of fs.readdirSync('./certs/') ) {
+function updateLocalCerts() {
+	for (const fileName of fs.readdirSync('./certs/')) {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
+			if ( name in localCerts ) {
+				console.log("Already have local certificate for %s", name);
+				continue;
+			}
 			console.log("Found local certificate for %s", name);
-			fs.readFile(fileName, (err,data) => {
+			fs.readFile(fileName, (err, data) => {
 				if (err) throw err;
 				console.log("Created secure context for %s", name);
-				certsFound[name] = new tls.createSecureContext({ pfx: data });
+				localCerts[name] = new tls.createSecureContext({pfx: data});
 			});
 		}
 	}
-	return certsFound;
-};
+}
+
+const localCerts = {};
+
+updateLocalCerts();
+
 const localhostSCtx = localCerts['localhost'];
 const fallbackSCtx = getFirstValue(localCerts);
 const acmeChallengePathPrefix = '/.well-known/acme-challenge/';
@@ -120,7 +127,11 @@ function dynamicSniCallback(name, cb) {
 								throw new Error(`Path does not begin with expected prefix.\n${path}`);
 							if (path.includes('/'))
 								throw new Error(`Path includes slashes after removing prefix.\n${path}`);
-							fs.writeFile(`./challenges/${path}`, data, err => done());
+							fs.writeFile(`./challenges/${path}`, data, err => {
+								if (err) throw err;
+								done();
+								console.log("Saved Let's Encrypt challenge...");
+							});
 						}
 					};
 					if (!checkAgainstDomainSuffixWhitelist(name)) {
