@@ -53,10 +53,13 @@ const localhostSCtx = new tls.createSecureContext({
 	pfx: fs.readFileSync('localhost.pfx')
 });
 
-var autoCertChallenges = {};
+var insecureResponses = {
+	'/robots.txt' : 'User-agent: *\nDisallow: /\n'
+};
+
 const autoCertTlsOpts = autoCert.tlsOpts({
 	email: pkgInfo.author.email,
-	challenges: autoCertChallenges
+	challenges: insecureResponses
 });
 
 const localCerts = () => {
@@ -170,10 +173,12 @@ app.use(passport.session());
 
 
 http.createServer((req, res) => {
-	var proof = autoCertChallenges[req.url];
+	var proof = insecureResponses[req.url];
 	if (proof) {
 		console.log('Challenge request: %s', proof);
-		res.end(proof);
+		res.set('Content-Type', 'text/plain');
+		res.send(new Buffer(proof));
+		res.end();
 	} else {
 		console.log('Insecure request: %s %s', req.method, req.url);
 		var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
@@ -241,6 +246,6 @@ app.use('/public', express.static('public'));
 app.get('/robots.txt',
 	(req, res) => {
 		res.set('Content-Type', 'text/plain');
-		res.send(new Buffer('User-agent: *\nDisallow: /\n'));
+		res.send(new Buffer(insecureResponses['/robots.txt']));
 	});
 
