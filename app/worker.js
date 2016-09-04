@@ -171,8 +171,6 @@ const spdyOptions = {
 	SNICallback: dynamicSniCallback
 };
 
-const aDayInSeconds = 86400;
-
 //noinspection JSUnusedLocalSymbols
 function noop() {}
 
@@ -215,7 +213,8 @@ function User(profile, accessToken, refreshToken, done) {
 				updatedUser),
 			{id}))
 		.then(user => isUpdate
-			? pfs.writeFile(filePath, cbor.encode(Object.setPrototypeOf(user, null)),
+			? pfs.writeFile(filePath,
+				cbor.encode(Object.setPrototypeOf(user, null)),
 			err => done(err, user))
 			: done(null, user));
 }
@@ -228,6 +227,8 @@ const robotsTxt = 'User-agent: *\nDisallow: /\n';
 
 //app.use(compression);
 /*
+
+ const aDayInSeconds = 86400;
 app.use(session({
 	secret: sessionKey,
 	resave: false,
@@ -351,6 +352,7 @@ app.all('*', (req,res,next) => {
 			"We got a security certificate certifying we're this host just to safely tell you we're not this host.\n" +
 			"Stay in school. Don't do hard drugs. Fix your stuff, guy.\n");
 		//res.end();
+		res.end();
 	}
 	else next();
 });
