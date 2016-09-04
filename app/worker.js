@@ -207,8 +207,8 @@ const robotsTxt = 'User-agent: *\nDisallow: /\n';
 //app.set('views', './views');
 //app.set('view options', {layout: false});
 
-app.use(compression);
-
+//app.use(compression);
+/*
 app.use(session({
 	secret: sessionKey,
 	resave: false,
@@ -231,6 +231,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(hsts.getSTS({"max-age":{days:90}}));
+*/
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
@@ -304,7 +305,7 @@ http.createServer((req, res) => {
 const server = spdy.createServer(spdyOptions, app).listen(443);
 
 const stupidlyHigh = -1>>>1;
-
+/*
 app.use('/peers', peerServer(server, {
 	debug: false,
 	key: peerKey,
@@ -312,7 +313,7 @@ app.use('/peers', peerServer(server, {
 	concurrent_limit: stupidlyHigh,
 	timeout: 10000
 }));
-
+*/
 app.all('*', (req,res,next) => {
 
 	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
@@ -321,12 +322,10 @@ app.all('*', (req,res,next) => {
 		res.statusCode = 400;
 		res.statusMessage = 'This Is Not Me';
 		res.setHeader('Content-Type', 'text/plain');
-		res.send(`This is not ${req.headers.host}.\n` +
-			`This is ${domainSuffixWhitelist[0]}.\n` +
-			"Please check your DNS settings.\n" +
+		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}.\n` +
+			"Please check your DNS configuration. You probably have a bad A record.\n" +
 			"We got a security certificate certifying we're this host just to safely tell you we're not this host.\n" +
-			"Stay in school. Don't do hard drugs.\n" +
-			"Fix your stuff.");
+			"Stay in school. Don't do hard drugs. Fix your stuff, guy.\n");
 		//res.end();
 	}
 	else next();
