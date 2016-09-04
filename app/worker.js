@@ -177,12 +177,13 @@ http.createServer((req, res) => {
 	if (proof) {
 		console.log('Challenge request: %s', proof);
 		res.setHeader('Content-Type', 'text/plain');
-		res.send(new Buffer(proof));
-		res.end();
+		res.statusCode = 200;
+		res.statusMessage = 'Challenge Accepted';
+		res.end(proof);
 	} else {
 		console.log('Insecure request: %s %s', req.method, req.url);
 		var destination = `https://${req.headers.host}/lost?r=${encodeURIComponent(req.url)}`;
-		res.writeHead(307,{
+		res.writeHead(307, 'Challenge Denied', {
 			'Location': destination
 		});
 		res.end(destination);
