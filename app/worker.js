@@ -295,7 +295,7 @@ passport.deserializeUser((id, done)=>{
 		done(err,user);
 	}).catch( err => {
 		console.error('While deserializing user profile for %s...\n%s',id,err.stack);
-		done(err, undefined);
+		done(err, false);
 	});
 });
 
