@@ -68,14 +68,15 @@ function updateLocalCerts() {
 				console.log("Already have local certificate for %s", name);
 				continue;
 			}
+			const filePath = `./certs/${fileName}`;
 			console.log("Found local certificate for %s", name);
 			reads.push(waitOn({
-					resources: [ fileName ],
+					resources: [ filePath ],
 					interval: 10,
 					timeout: 60000,
 					window: 100
 				})
-				.then(() => pfs.readFile(`./certs/${fileName}`))
+				.then(() => pfs.readFile(filePath))
 				.then((data) => {
 					console.log("Created secure context for %s", name);
 					localCerts[name] = new tls.createSecureContext({pfx: data});
