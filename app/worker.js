@@ -240,7 +240,10 @@ function User(profile, accessToken, refreshToken, done) {
 				reject(err);
 			}
 		}))
-		.catch(err => Promise.resolve({}))
+		.catch(err => {
+			console.log('User profile for %s does not exist.', id);
+			return {};
+		})
 		.then(readUser => Object.setPrototypeOf(
 			Object.assign(
 				{created:now},
@@ -249,10 +252,12 @@ function User(profile, accessToken, refreshToken, done) {
 			{id}))
 		.then(user => {
 			if (isUpdate) {
+				console.log('Updating user profile for %s.', id);
 				pfs.writeFile(filePath,
 					cbor.encode(Object.setPrototypeOf(user, null)),
 					err => done(err, user));
 			} else {
+				console.log('Accessed user profile for %s.', id);
 				done(null, user);
 			}
 			return user;
@@ -260,8 +265,14 @@ function User(profile, accessToken, refreshToken, done) {
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
 
-passport.serializeUser((user, done)=>done(null, user.id));
-passport.deserializeUser((id, done)=>User(id).then(done));
+passport.serializeUser((user, done)=>{
+	console.log('Serializing user profile for %s.', user.id);
+	done(null, user.id)
+});
+passport.deserializeUser((id, done)=>{
+	console.log('Deserializing user profile for %s.', id);
+	User(id).then(done)
+});
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
 
@@ -503,7 +514,7 @@ app.get('/favicon.ico',
 
 app.get('/whoami',
 	(req, res) => {
-		res.send(req.user);
+		res.send(req.user || 'No idea.');
 	});
 
 app.use('/public', express.static('public'));
