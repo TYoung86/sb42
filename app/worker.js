@@ -445,15 +445,6 @@ app.all('/lost/*', (req, res, next) => {
 	next();
 });
 
-app.use('/peers', peerServer(server, {
-	debug: false,
-	key: peerKey,
-	ip_limit: stupidlyHigh,
-	concurrent_limit: stupidlyHigh,
-	timeout: 10000
-}));
-
-
 const aesGcmConfig = {
 	key: usersKey
 };
@@ -548,7 +539,15 @@ app.use(function(req, res){
 	req.sendStatus(404);
 });
 
-setTimeout(() => {
-	updateLocalCerts()
-		.then(() => server = spdy.createServer(spdyOptions, app).listen(443));
-}, 50);
+updateLocalCerts()
+	.then(() => server = spdy.createServer(spdyOptions, app))
+	.then((server) =>
+		app.use('/peers', peerServer(server, {
+			debug: false,
+			key: peerKey,
+			ip_limit: stupidlyHigh,
+			concurrent_limit: stupidlyHigh,
+			timeout: 10000
+		})))
+	.then(() => new Promise((res,rej) =>setTimeout(()=>res(),50)))
+	.then(() => server.listen(443));
