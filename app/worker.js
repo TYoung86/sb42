@@ -280,7 +280,7 @@ function User(profile, accessToken, refreshToken, done) {
 		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
-
+/*
 passport.serializeUser((user, done)=>{
 	console.log('Serializing user profile for %s.', user.id);
 	done(null, user.id)
@@ -297,6 +297,7 @@ passport.deserializeUser((id, done)=>{
 		done(err, undefined);
 	})
 });
+*/
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
 app.use((req,res,next) => {
@@ -362,9 +363,6 @@ app.use((req,res,next) => {
 	}
 });
 
-app.use(hsts.getSTS({"max-age":{days:90}}));
-//app.use(passport.initialize());
-//app.use(passport.session());
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
@@ -437,6 +435,9 @@ http.createServer((req, res) => {
 	}
 }).listen(80);
 
+app.use(hsts.getSTS({"max-age":{days:90}}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.all('/lost/*', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
