@@ -55,7 +55,7 @@ const app = express();
 
 //app.set('view engine', 'ejs');
 
-var localCerts = {};
+const localCerts = {};
 
 function updateLocalCerts() {
 	const reads = [];
@@ -80,6 +80,7 @@ function updateLocalCerts() {
 					console.log("Created secure context for %s", name);
 					localCerts[name] = new tls.createSecureContext({pfx: data});
 				})
+				.catch(err => console.error("While retrieving local certificate %s...\n%s", name, err.stack))
 			);
 		}
 	}
@@ -136,7 +137,8 @@ function dynamicSniCallback(name, cb) {
 										cb(null, localCerts[name]);
 									} else
 										throw new Error('Timed out waiting for certificate to appear.');
-								});
+								})
+								.catch(err => console.error("While updating local certificates to account for %s...\n%s", name, err.stack));
 						})
 						.catch( err => {
 							fs.closeSync(fs.openSync(lockFile, 'a'));
@@ -225,8 +227,7 @@ function User(profile, accessToken, refreshToken, done) {
 	} : {};
 	var filePath = './users/'+id;
 	pfs.access(filePath, fs.constants.R_OK)
-		.then(err => err ? Promise.resolve({})
-			: new Promise((resolve,reject) => {
+		.then(() => new Promise((resolve,reject) => {
 			var cborDecoder = new cbor.Decoder();
 			cborDecoder.on('complete', obj => resolve(obj) );
 			cborDecoder.on('error', obj => reject(obj) );
@@ -238,6 +239,7 @@ function User(profile, accessToken, refreshToken, done) {
 				reject(err);
 			}
 		}))
+		.catch(err => Promise.resolve({}))
 		.then(readUser => Object.setPrototypeOf(
 			Object.assign(
 				{created:now},
@@ -248,7 +250,8 @@ function User(profile, accessToken, refreshToken, done) {
 			? pfs.writeFile(filePath,
 				cbor.encode(Object.setPrototypeOf(user, null)),
 			err => done(err, user))
-			: done(null, user));
+			: done(null, user))
+		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
