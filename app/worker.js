@@ -312,11 +312,9 @@ app.use(session({
 	saveUninitialized: false,
 }));
 
-/*
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(hsts.getSTS({"max-age":{days:90}}));
-*/
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
