@@ -214,12 +214,12 @@ function User(profile, accessToken, refreshToken, done) {
 		return new Promise( (res,rej) => User( profile,undefined,undefined,
 			(err,obj) => (err?rej:res)({err, obj}) ) );
 	console.log('User call profile for: ', profile);
-	var isUpdate = typeof profile === 'object';
-	var id = isUpdate ? profile.id : profile;
+	let isUpdate = typeof profile === 'object';
+	const id = isUpdate ? profile.id : profile;
 	isUpdate = isUpdate && Object.keys(profile).length > 0;
 	console.log('User profile %s: %s', isUpdate ? 'update' : 'access',  id);
-	var now = Date.UTC;
-	var updatedUser = profile ? {
+	const now = Date.UTC();
+	const updatedUser = profile ? {
 		accessToken,
 		refreshToken,
 		email: profile.email,
@@ -227,10 +227,10 @@ function User(profile, accessToken, refreshToken, done) {
 		picture: profile.picture || ( profile._json && profile._json.picture ),
 		modified: now
 	} : {};
-	var filePath = './users/'+id;
+	const filePath = './users/'+id;
 	pfs.access(filePath, fs.constants.R_OK)
 		.then(() => new Promise((resolve,reject) => {
-			var cborDecoder = new cbor.Decoder();
+			const cborDecoder = new cbor.Decoder();
 			cborDecoder.on('complete', obj => resolve(obj) );
 			cborDecoder.on('error', obj => reject(obj) );
 			try {
