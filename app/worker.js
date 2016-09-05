@@ -36,7 +36,7 @@ const compression = require('compression');
 //const shrinkRay = require('shrink-ray');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
-const passport = require('passport-debug');
+const passport = require('passport');
 const GooglePassportStrategy = require('passport-google-oauth20').Strategy;
 const peerKey = process.env.peerKey;
 const sessionKey = process.env.sessionKey;
@@ -53,6 +53,22 @@ let server;
 //noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
 const pkgInfo = JSON.parse(fs.readFileSync('package.json'));
 const app = express();
+
+
+
+//app.engine('html', ejs.renderFile);
+//app.set('views', './views');
+//app.set('view options', {layout: false});
+/*
+ app.use(shrinkRay({
+ zlib: {
+ chunkSize: 64 * 1024
+ }
+ }));
+ */
+app.use(compression({
+	chunkSize: 64 * 1024
+}));
 
 //app.set('view engine', 'ejs');
 
@@ -283,21 +299,6 @@ passport.deserializeUser((id, done)=>{
 });
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
-
-//app.engine('html', ejs.renderFile);
-//app.set('views', './views');
-//app.set('view options', {layout: false});
-
-app.use(compression({
-	chunkSize: 64 * 1024
-}));
-/*
-app.use(shrinkRay({
-	zlib: {
-		chunkSize: 64 * 1024
-	}
-}));
-*/
 app.use((req,res,next) => {
 	if ( res.flush ) {
 		let flushing = true;
@@ -362,8 +363,8 @@ app.use((req,res,next) => {
 });
 
 app.use(hsts.getSTS({"max-age":{days:90}}));
-app.use(passport.initialize());
-app.use(passport.session());
+//app.use(passport.initialize());
+//app.use(passport.session());
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
