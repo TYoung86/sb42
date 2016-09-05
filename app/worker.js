@@ -66,7 +66,7 @@ function updateLocalCerts() {
 			}
 			console.log("Found local certificate for %s", name);
 			reads.push(name({
-					resources: [ pfxFile ],
+					resources: [ fileName ],
 					interval: 10,
 					timeout: 60000,
 					window: 100
