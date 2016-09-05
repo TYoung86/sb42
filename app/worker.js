@@ -272,7 +272,11 @@ passport.serializeUser((user, done)=>{
 });
 passport.deserializeUser((id, done)=>{
 	console.log('Deserializing user profile for %s.', id);
-	User(id).then(done)
+	User(id).then((err, user) => {
+		if (err) console.warn(err.stack);
+		console.log('Done deserializing user profile for %s.', id);
+		done(err,user);
+	})
 });
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
