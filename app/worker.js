@@ -448,7 +448,7 @@ app.get('/auth/google',
 	}));
 
 app.get('/auth/google/callback',
-	passport.authenticate('google', { failureRedirect: '/login' }),
+	passport.authenticate('google', { failureRedirect: '/' }),
 	(req, res)=>{
 		console.log('Google authentication callback request from %s',
 			req.connection.remoteAddress);
