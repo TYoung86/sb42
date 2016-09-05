@@ -293,7 +293,7 @@ passport.deserializeUser((id, done)=>{
 		done(null, user);
 	}).catch( err => {
 		console.error('While deserializing user profile for %s...\n%s',id,err.stack);
-		done(err, false);
+		done(null, false);
 	});
 });
 
