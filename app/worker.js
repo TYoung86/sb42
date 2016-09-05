@@ -55,6 +55,8 @@ const app = express();
 
 //app.set('view engine', 'ejs');
 
+var localCerts = {};
+
 function updateLocalCerts() {
 	const reads = [];
 	for (const fileName of fs.readdirSync('./certs/')) {
@@ -84,7 +86,6 @@ function updateLocalCerts() {
 	return Promise.all(reads);
 }
 
-const localCerts = {};
 
 updateLocalCerts();
 
