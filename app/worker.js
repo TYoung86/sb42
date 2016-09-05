@@ -47,6 +47,7 @@ const cbor = require('cbor');
 const hsts = require('strict-transport-security');
 const spdy = require('spdy');
 const waitOn = promisify(require('wait-on'));
+let server;
 
 
 //noinspection JSUnresolvedVariable,ES6ModulesDependencies,NodeModulesDependencies
@@ -87,9 +88,6 @@ function updateLocalCerts() {
 	}
 	return Promise.all(reads);
 }
-
-
-updateLocalCerts();
 
 const localhostSCtx = localCerts['localhost'];
 const fallbackSCtx = getFirstValue(localCerts);
@@ -437,12 +435,7 @@ http.createServer((req, res) => {
 		}
 	}
 }).listen(80);
-/*(req, res) => {
- console.log('Secure request from %s: %s %s',
- req.connection.remoteAddress, req.method, req.url);
- return app(req,res);
- }*/
-const server = spdy.createServer(spdyOptions, app).listen(443);
+
 
 app.all('/lost/*', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
@@ -554,3 +547,8 @@ app.use(function(req, res){
 
 	req.sendStatus(404);
 });
+
+setTimeout(() => {
+	updateLocalCerts()
+		.then(() => server = spdy.createServer(spdyOptions, app).listen(443));
+}, 50);
