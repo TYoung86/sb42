@@ -340,9 +340,31 @@ app.use(session({
 	saveUninitialized: false,
 }));
 
+const stupidlyHigh = -1>>>1;
+app.use((req,res,next) => {
+	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
+		console.log('Bad host request from %s: %s %s',
+			req.connection.remoteAddress, req.method, req.url);
+		res.statusCode = 410;
+		res.statusMessage = 'This Is Not Me';
+		res.setHeader('Content-Type', 'text/plain');
+		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
+			"Please check your DNS configuration. Someone typed an A record IP wrong.\n" +
+			"We got a security certificate certifying we're these guys just to safely tell you we're not.\n" +
+			"Stay in school. Don't do hard drugs. Fix your stuff, guy.\n");
+		//res.end();
+		res.end();
+	}
+	else {
+		console.log("Filling secure request for %s: %s %s",
+			req.connection.remoteAddress, req.method, req.url);
+		next();
+	}
+});
+
+app.use(hsts.getSTS({"max-age":{days:90}}));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(hsts.getSTS({"max-age":{days:90}}));
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
@@ -420,28 +442,6 @@ http.createServer((req, res) => {
  return app(req,res);
  }*/
 const server = spdy.createServer(spdyOptions, app).listen(443);
-
-const stupidlyHigh = -1>>>1;
-app.all('*', (req,res,next) => {
-	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
-		console.log('Bad host request from %s: %s %s',
-			req.connection.remoteAddress, req.method, req.url);
-		res.statusCode = 410;
-		res.statusMessage = 'This Is Not Me';
-		res.setHeader('Content-Type', 'text/plain');
-		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
-			"Please check your DNS configuration. Someone typed an A record IP wrong.\n" +
-			"We got a security certificate certifying we're these guys just to safely tell you we're not.\n" +
-			"Stay in school. Don't do hard drugs. Fix your stuff, guy.\n");
-		//res.end();
-		res.end();
-	}
-	else {
-		console.log("Filling secure request for %s: %s %s",
-			req.connection.remoteAddress, req.method, req.url);
-		next();
-	}
-});
 
 app.all('/lost/*', (req, res, next) => {
 	console.log('Lost request from %s: %s %s',
