@@ -176,7 +176,6 @@ function dynamicSniCallback(name, cb) {
 										console.log("Answering Let's Encrypt challenge...");
 										localCerts[name] = new tls.createSecureContext({pfx: data});
 										cb(null, localCerts[name]);
-										release();
 									});
 								});
 							});
