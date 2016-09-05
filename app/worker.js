@@ -261,6 +261,7 @@ function User(profile, accessToken, refreshToken, done) {
 				console.log('Accessed user profile for %s.', id);
 				var err = user instanceof Error ? user : null;
 				done(err, err ? null : user);
+				throw err;
 			}
 		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
