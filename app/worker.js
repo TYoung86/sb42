@@ -516,6 +516,7 @@ app.get('/favicon.ico',
 
 app.get('/whoami',
 	(req, res) => {
+		console.log('Whoami: ', req.user);
 		res.send(req.user || 'No idea.');
 	});
 
