@@ -433,11 +433,17 @@ const aesGcmConfig = {
 	key: usersKey
 };
 
-passport.use(new GooglePassportStrategy({
-		clientID: process.env.GOOGLE_CLIENT_ID,
-		clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-		callbackURL: "https://sb42.life/auth/google/callback"
-	}, User ));
+function makeGoogleAuthCallbackUrl(host) {
+	return `https://${host}/auth/google/callback`;
+}
+
+const googlePassportStrategy = new GooglePassportStrategy({
+	clientID: process.env.GOOGLE_CLIENT_ID,
+	clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+	callbackURL: makeGoogleAuthCallbackUrl('sb42.life')
+}, User );
+
+passport.use(googlePassportStrategy);
 
 app.get('/auth/google',
 	passport.authenticate('google', {
@@ -448,6 +454,10 @@ app.get('/auth/google',
 	}));
 
 app.get('/auth/google/callback',
+	(req, res, next) => {
+		googlePassportStrategy.callbackURL = makeGoogleAuthCallbackUrl(req.headers.host);
+		next();
+	},
 	passport.authenticate('google', { failureRedirect: '/' }),
 	(req, res)=>{
 		console.log('Google authentication callback request from %s',
@@ -480,7 +490,7 @@ app.get('/favicon.ico',
 		res.sendFile(`${__dirname}/public/favicon.ico`);
 	});
 
-app.target('/whoami',
+app.get('/whoami',
 	(req, res) => {
 		res.send(req.user);
 	});
