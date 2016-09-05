@@ -213,6 +213,7 @@ function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
 		return new Promise( (res,rej) => User( profile,undefined,undefined,
 			(err,obj) => (err?rej:res)({err, obj}) ) );
+	console.log('User call profile for: ', profile);
 	var isUpdate = typeof profile === 'object';
 	var id = isUpdate ? profile.id : profile;
 	isUpdate = isUpdate && Object.keys(profile).length > 0;
