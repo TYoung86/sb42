@@ -252,6 +252,7 @@ function User(profile, accessToken, refreshToken, done) {
 				updatedUser),
 			{id}))
 		.then(user => {
+			console.log('Resulting user profile for: ', user);
 			if (isUpdate) {
 				console.log('Updating user profile for %s.', id);
 				pfs.writeFile(filePath,
