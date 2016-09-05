@@ -65,7 +65,7 @@ function updateLocalCerts() {
 				continue;
 			}
 			console.log("Found local certificate for %s", name);
-			reads.push(name({
+			reads.push(waitOn({
 					resources: [ fileName ],
 					interval: 10,
 					timeout: 60000,
