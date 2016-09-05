@@ -226,7 +226,7 @@ function noop() {}
 function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
 		return new Promise( (res,rej) => User( profile,undefined,undefined,
-			(err,obj) => (err?rej:res)({err, obj}) ) );
+			(err,obj) => (err?rej:res)(err?err:obj) ) );
 	console.log('User call profile for:', profile);
 	let isUpdate = typeof profile === 'object';
 	const id = isUpdate ? profile.id : profile;
@@ -288,11 +288,9 @@ passport.serializeUser((user, done)=>{
  */
 passport.deserializeUser((id, done)=>{
 	console.log('Deserializing user profile for %s.', id);
-	User(id).then((err, user) => {
-		if (err)
-			console.warn('While deserializing user profile for %s...\n%s',id,err.stack);
+	User(id).then((user) => {
 		console.log('Done deserializing user profile for %s.\n', id, user);
-		done(err,user);
+		done(null, user);
 	}).catch( err => {
 		console.error('While deserializing user profile for %s...\n%s',id,err.stack);
 		done(err, false);
