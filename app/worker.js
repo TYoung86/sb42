@@ -213,12 +213,12 @@ function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
 		return new Promise( (res,rej) => User( profile,undefined,undefined,
 			(err,obj) => (err?rej:res)({err, obj}) ) );
-	console.log('User call profile for: ', profile);
+	console.log('User call profile for:', profile);
 	let isUpdate = typeof profile === 'object';
 	const id = isUpdate ? profile.id : profile;
 	isUpdate = isUpdate && Object.keys(profile).length > 0;
 	console.log('User profile %s: %s', isUpdate ? 'update' : 'access',  id);
-	const now = Date.UTC();
+	const now = new Date();
 	const updatedUser = profile ? {
 		accessToken,
 		refreshToken,
@@ -252,7 +252,7 @@ function User(profile, accessToken, refreshToken, done) {
 				updatedUser),
 			{id}))
 		.then(user => {
-			console.log('Resulting user profile for: ', user);
+			console.log('Resulting user profile for:', user);
 			if (isUpdate) {
 				console.log('Updating user profile for %s.', id);
 				pfs.writeFile(filePath,
@@ -262,7 +262,6 @@ function User(profile, accessToken, refreshToken, done) {
 				console.log('Accessed user profile for %s.', id);
 				done(null, user);
 			}
-			return user;
 		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
@@ -516,7 +515,7 @@ app.get('/favicon.ico',
 
 app.get('/whoami',
 	(req, res) => {
-		console.log('Whoami: ', req.user);
+		console.log('Whoami:', req.user);
 		res.send(req.user || 'No idea.');
 	});
 
