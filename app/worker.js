@@ -141,7 +141,7 @@ function dynamicSniCallback(name, cb) {
 								})
 								.catch(err => console.error("While updating local certificates to account for %s...\n%s", name, err.stack));
 						})
-						.catch( err => {
+						.catch( () => {
 							fs.closeSync(fs.openSync(lockFile, 'a'));
 							console.log("Let's Encrypt SNI request: %s", name);
 							//noinspection JSUnusedGlobalSymbols
@@ -443,8 +443,7 @@ app.get('/auth/google',
 	passport.authenticate('google', {
 		scope: [
 			'email',
-			'profile',
-			'https://www.googleapis.com/auth/plus.login'
+			'profile'
 		]
 	}));
 
