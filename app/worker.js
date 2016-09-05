@@ -475,7 +475,7 @@ app.get('/favicon.ico',
 		console.log('Secure favicon.ico request from %s',
 			req.connection.remoteAddress);
 		res.setHeader('Content-Type', 'image/x-icon');
-		res.sendFile('./public/favicon.ico');
+		res.sendFile(`${__dirname}/public/favicon.ico`);
 	});
 
 app.use('/public', express.static('public'));
