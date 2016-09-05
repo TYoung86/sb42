@@ -211,7 +211,7 @@ function noop() {}
 
 function User(profile, accessToken, refreshToken, done) {
 	if ( !done )
-		return new Promise( (res,rej) => User( profile,
+		return new Promise( (res,rej) => User( profile,undefined,undefined,
 			(err,obj) => (err?rej:res)({err, obj}) ) );
 	var isUpdate = typeof profile === 'object';
 	var id = isUpdate ? profile.id : profile;
