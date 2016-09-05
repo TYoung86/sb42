@@ -562,4 +562,7 @@ updateLocalCerts()
 	.then(() => {
 		console.log('Exposing the server...');
 		return server.listen(443)
+	})
+	.catch(err => {
+		console.error("Something went wrong during initialization...\n", err.stack);
 	});
