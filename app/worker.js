@@ -402,17 +402,7 @@ http.createServer((req, res) => {
 const server = spdy.createServer(spdyOptions, app).listen(443);
 
 const stupidlyHigh = -1>>>1;
-
-app.use('/peers', peerServer(server, {
-	debug: false,
-	key: peerKey,
-	ip_limit: stupidlyHigh,
-	concurrent_limit: stupidlyHigh,
-	timeout: 10000
-}));
-
 app.all('*', (req,res,next) => {
-
 	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
 		console.log('Bad host request from %s: %s %s',
 			req.connection.remoteAddress, req.method, req.url);
@@ -426,7 +416,11 @@ app.all('*', (req,res,next) => {
 		//res.end();
 		res.end();
 	}
-	else next();
+	else {
+		console.log("Filling secure request for %s: %s %s",
+			req.connection.remoteAddress, req.method, req.url);
+		next();
+	}
 });
 
 app.all('/lost/*', (req, res, next) => {
@@ -436,6 +430,15 @@ app.all('/lost/*', (req, res, next) => {
 	res.render('lost');
 	next();
 });
+
+app.use('/peers', peerServer(server, {
+	debug: false,
+	key: peerKey,
+	ip_limit: stupidlyHigh,
+	concurrent_limit: stupidlyHigh,
+	timeout: 10000
+}));
+
 
 const aesGcmConfig = {
 	key: usersKey
