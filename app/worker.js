@@ -223,7 +223,7 @@ function User(profile, accessToken, refreshToken, done) {
 		refreshToken,
 		email: profile.email,
 		name: profile.name,
-		picture: profile._json['picture'],
+		picture: profile.picture || ( profile._json && profile._json.picture ),
 		modified: now
 	} : {};
 	var filePath = './users/'+id;
@@ -480,6 +480,11 @@ app.get('/favicon.ico',
 		res.sendFile(`${__dirname}/public/favicon.ico`);
 	});
 
+app.target('/whoami',
+	(req, res) => {
+		res.send(req.user);
+	});
+
 app.use('/public', express.static('public'));
 
 
@@ -487,17 +492,22 @@ app.use('/public', express.static('public'));
 app.use(function(req, res){
 	res.status(404);
 
+
+	// default to plain-text. send()
+	if (req.accepts('txt')) {
+		res.type('txt').send('404 Not Found\nRequest not handled.');
+		return;
+	}
 	// respond with json
 	if (req.accepts('json')) {
 		res.send({error:{status:{code:404,message:'Not Found'}},reason:'Request not handled.'});
 		return;
 	}
-	// respond with json
+	// respond with xml
 	if (req.accepts('xml')) {
 		res.send('<?xml version="1.0"?><error><status code="404"><message>Not Found</message></status><reason>Request not handled.</reason></error>');
 		return;
 	}
 
-	// default to plain-text. send()
-	res.type('txt').send('404 Not Found\nRequest not handled.');
+	req.sendStatus(404);
 });
