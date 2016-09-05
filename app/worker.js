@@ -273,9 +273,13 @@ passport.serializeUser((user, done)=>{
 passport.deserializeUser((id, done)=>{
 	console.log('Deserializing user profile for %s.', id);
 	User(id).then((err, user) => {
-		if (err) console.warn(err.stack);
-		console.log('Done deserializing user profile for %s.', id);
+		if (err)
+			console.warn('While deserializing user profile for %s...\n%s',id,err.stack);
+		console.log('Done deserializing user profile for %s.\n', id, user);
 		done(err,user);
+	}).catch( err => {
+		console.error('While deserializing user profile for %s...\n%s',id,err.stack);
+		done(err, undefined);
 	})
 });
 
