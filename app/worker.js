@@ -343,7 +343,7 @@ http.createServer((req, res) => {
 				if ( !checkAgainstDomainSuffixWhitelist(host) ) {
 					console.log('Bad host request from %s: %s %s %s',
 						req.connection.remoteAddress, req.method, host, req.url);
-					res.writeHead(400,'This Is Not Me', { 'Upgrade-Insecure-Requests': 1 });
+					res.writeHead(410,'This Is Not Me', { 'Upgrade-Insecure-Requests': 1 });
 					res.end(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
 						"Most likely, some network admin somewhere typed an A record IP wrong. If you are that admin, shame on you.\n" +
 						"Please check your DNS settings, and (if debugging) confirm you did not manually specify your host header or add an entry to your hosts file.");
@@ -405,7 +405,7 @@ app.all('*', (req,res,next) => {
 	if ( !checkAgainstDomainSuffixWhitelist(req.headers.host) ) {
 		console.log('Bad host request from %s: %s %s',
 			req.connection.remoteAddress, req.method, req.url);
-		res.statusCode = 400;
+		res.statusCode = 410;
 		res.statusMessage = 'This Is Not Me';
 		res.setHeader('Content-Type', 'text/plain');
 		res.send(`This is not ${req.headers.host}. This is ${domainSuffixWhitelist[0]}. You are not being hacked.\n` +
