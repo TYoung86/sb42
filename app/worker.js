@@ -286,32 +286,37 @@ app.use((req,res,next) => {
 		next();
 	}
 });
-	/*
 
-	 const aDayInSeconds = 86400;
-	app.use(session({
-		secret: sessionKey,
-		resave: false,
-		cookie: {
-			secure: true,
-			httpOnly: true,
-			sameSite: true,
-		},
-		store: new FileStore({
-			ttl: aDayInSeconds,
-			reapInterval: aDayInSeconds,
-			reapAsync: true,
-			reapSyncFallback: true,
-			encrypt: true
-		}),
-		rolling: true,
-		saveUninitialized: false,
-	}));
 
-	app.use(passport.initialize());
-	app.use(passport.session());
-	app.use(hsts.getSTS({"max-age":{days:90}}));
-	*/
+const aDayInSeconds = 86400;
+app.use(session({
+	secret: sessionKey,
+	resave: false,
+	cookie: {
+		secure: true,
+		httpOnly: true,
+		sameSite: true,
+	},
+	store: new FileStore({
+		ttl: aDayInSeconds,
+		reapInterval: aDayInSeconds,
+		reapAsync: true,
+		reapSyncFallback: true,
+		encrypt: true,
+		minTimeout: 10,
+		maxTimeout: 100,
+		factor: 1,
+		retries: 10,
+	}),
+	rolling: true,
+	saveUninitialized: false,
+}));
+
+/*
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(hsts.getSTS({"max-age":{days:90}}));
+*/
 
 http.createServer((req, res) => {
 	switch ( req.url ) {
