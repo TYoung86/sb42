@@ -60,6 +60,7 @@ function updateLocalCerts() {
 	for (const fileName of fs.readdirSync('./certs/')) {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
+			console.log("Do we already have a cert for %s? %s", name, name in localCerts);
 			if ( name in localCerts ) {
 				console.log("Already have local certificate for %s", name);
 				continue;
@@ -132,7 +133,7 @@ function dynamicSniCallback(name, cb) {
 										console.log("Satisfied Let's Encrypt SNI request from local storage: %s", name);
 										cb(null, localCerts[name]);
 									} else
-										throw new Error('Timed out waiting for certificate to appear.')
+										throw new Error('Timed out waiting for certificate to appear.');
 								});
 						})
 						.catch( err => {
