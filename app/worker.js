@@ -285,6 +285,7 @@ passport.serializeUser((user, done)=>{
 	console.log('Serializing user profile for %s.', user.id);
 	done(null, user.id)
 });
+ */
 passport.deserializeUser((id, done)=>{
 	console.log('Deserializing user profile for %s.', id);
 	User(id).then((err, user) => {
@@ -295,9 +296,8 @@ passport.deserializeUser((id, done)=>{
 	}).catch( err => {
 		console.error('While deserializing user profile for %s...\n%s',id,err.stack);
 		done(err, undefined);
-	})
+	});
 });
-*/
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
 app.use((req,res,next) => {
