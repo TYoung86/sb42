@@ -543,7 +543,7 @@ app.use(function(req, res){
 updateLocalCerts()
 	.then(() => {
 		console.log('Setting up the actual server...');
-		server = spdy.createServer(spdyOptions, app)
+		return server = spdy.createServer(spdyOptions, app);
 	})
 	.then((server) => {
 		console.log('Setting up the peer server...');
