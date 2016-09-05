@@ -541,14 +541,25 @@ app.use(function(req, res){
 });
 
 updateLocalCerts()
-	.then(() => server = spdy.createServer(spdyOptions, app))
-	.then((server) =>
+	.then(() => {
+		console.log('Setting up the actual server...');
+		server = spdy.createServer(spdyOptions, app)
+	})
+	.then((server) => {
+		console.log('Setting up the peer server...');
 		app.use('/peers', peerServer(server, {
 			debug: false,
 			key: peerKey,
 			ip_limit: stupidlyHigh,
 			concurrent_limit: stupidlyHigh,
 			timeout: 10000
-		})))
-	.then(() => new Promise((res,rej) =>setTimeout(()=>res(),50)))
-	.then(() => server.listen(443));
+		}));
+	})
+	.then(() => {
+		console.log('Waiting a bit for things to settle down...');
+		return new Promise((res,rej) =>setTimeout(()=>res(),50))
+	})
+	.then(() => {
+		console.log('Exposing the server...');
+		return server.listen(443)
+	});
