@@ -61,6 +61,7 @@ function updateLocalCerts() {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
 			console.log("Do we already have a cert for %s? %s", name, name in localCerts);
+			console.log("We have localCerts for %s", Object.keys(localCerts).join(', '));
 			if ( name in localCerts ) {
 				console.log("Already have local certificate for %s", name);
 				continue;
