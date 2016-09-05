@@ -62,8 +62,8 @@ function updateLocalCerts() {
 	for (const fileName of fs.readdirSync('./certs/')) {
 		if (fileName.endsWith('.pfx') || fileName.endsWith('.p12')) {
 			const name = fileName.slice(0, -4);
-			console.log("Do we already have a cert for %s? %s", name, name in localCerts);
-			console.log("We have localCerts for %s", Object.keys(localCerts).join(', '));
+			//console.log("Do we already have a cert for %s? %s", name, name in localCerts);
+			//console.log("We have localCerts for %s", Object.keys(localCerts).join(', '));
 			if ( name in localCerts ) {
 				console.log("Already have local certificate for %s", name);
 				continue;
@@ -247,13 +247,21 @@ function User(profile, accessToken, refreshToken, done) {
 				readUser,
 				updatedUser),
 			{id}))
-		.then(user => isUpdate
-			? pfs.writeFile(filePath,
-				cbor.encode(Object.setPrototypeOf(user, null)),
-			err => done(err, user))
-			: done(null, user))
+		.then(user => {
+			if (isUpdate) {
+				pfs.writeFile(filePath,
+					cbor.encode(Object.setPrototypeOf(user, null)),
+					err => done(err, user));
+			} else {
+				done(null, user);
+			}
+			return user;
+		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
+
+passport.serializeUser((user, done)=>done(null, user.id));
+passport.deserializeUser((id, done)=>User(id).then(done));
 
 const robotsTxt = 'User-agent: *\nDisallow: /\n';
 
