@@ -241,16 +241,15 @@ function User(profile, accessToken, refreshToken, done) {
 				reject(err);
 			}
 		}))
-		.catch(err => {
-			console.log('User profile for %s does not exist.', id);
-			return {};
-		})
 		.then(readUser => Object.setPrototypeOf(
 			Object.assign(
 				{created:now},
 				readUser,
 				updatedUser),
 			{id}))
+		.catch(err => {
+			return new Error(`User profile for ${id} does not exist.`);
+		})
 		.then(user => {
 			console.log('Resulting user profile for:', user);
 			if (isUpdate) {
@@ -260,7 +259,8 @@ function User(profile, accessToken, refreshToken, done) {
 					err => done(err, user));
 			} else {
 				console.log('Accessed user profile for %s.', id);
-				done(null, user);
+				var err = user instanceof Error ? user : null;
+				done(err, err ? null : user);
 			}
 		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
