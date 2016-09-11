@@ -35,7 +35,8 @@ const peerServer = peer.ExpressPeerServer;
 const compression = require('compression');
 //const shrinkRay = require('shrink-ray');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+const sessionFileStore = require('session-file-store-unofficial');
+const FileStore = sessionFileStore(session);
 const passport = require('passport');
 const GooglePassportStrategy = require('passport-google-oauth20').Strategy;
 const peerKey = process.env.peerKey;
@@ -43,7 +44,7 @@ const sessionKey = process.env.sessionKey;
 const usersKey = process.env.usersKey;
 const ejs = require('ejs');
 const aesGcm = require('aes-gcm-stream');
-const cbor = require('cbor');
+const cbor = require('cbor-js');
 const hsts = require('strict-transport-security');
 const spdy = require('spdy');
 const waitOn = promisify(require('wait-on'));
@@ -108,9 +109,9 @@ function updateLocalCerts() {
 const localhostSCtx = localCerts['localhost'];
 const fallbackSCtx = getFirstValue(localCerts);
 const acmeChallengePathPrefix = '/.well-known/acme-challenge/';
-const domainSuffixWhitelist = [
-	'sb42.life'
-];
+const domainSuffixWhitelist = process.env.DOMAIN_WHITELIST
+	? process.env.DOMAIN_WHITELIST.split(',')
+	: [ 'sb42.life' ];
 
 function checkAgainstDomainSuffixWhitelist(host) {
 	if ( typeof host !== 'string' ) return false;
@@ -269,7 +270,7 @@ function User(profile, accessToken, refreshToken, done) {
 			if (isUpdate) {
 				console.log('Updating user profile for %s.', id);
 				pfs.writeFile(filePath,
-					cbor.encode(Object.setPrototypeOf(user, null)),
+					serialize(Object.setPrototypeOf(user, null)),
 					err => done(err, user));
 			} else {
 				console.log('Accessed user profile for %s.', id);
@@ -315,6 +316,12 @@ app.use((req,res,next) => {
 });
 
 
+function serialize(data) {
+	return Buffer.from(cbor.encode(data));
+}
+function deserialize(data) {
+	return cbor.decode(data);
+}
 const aDayInSeconds = 86400;
 app.use(session({
 	secret: sessionKey,
@@ -330,10 +337,16 @@ app.use(session({
 		reapAsync: true,
 		reapSyncFallback: true,
 		encrypt: true,
+		encryptEncoding: null,
 		minTimeout: 10,
 		maxTimeout: 100,
 		factor: 1,
 		retries: 10,
+		fileExtension: '.session',
+		encoding: null,
+		encoder: serialize,
+		decoder: deserialize,
+		keyFunction: sId => sessionKey + sId,
 	}),
 	rolling: true,
 	saveUninitialized: false,
@@ -456,7 +469,7 @@ function makeGoogleAuthCallbackUrl(host) {
 const googlePassportStrategy = new GooglePassportStrategy({
 	clientID: process.env.GOOGLE_CLIENT_ID,
 	clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-	callbackURL: makeGoogleAuthCallbackUrl('sb42.life')
+	callbackURL: makeGoogleAuthCallbackUrl(domainSuffixWhitelist[0])
 }, User );
 
 passport.use(googlePassportStrategy);
@@ -471,7 +484,8 @@ app.get('/auth/google',
 
 app.get('/auth/google/callback',
 	(req, res, next) => {
-		googlePassportStrategy.callbackURL = makeGoogleAuthCallbackUrl(req.headers.host);
+		googlePassportStrategy.callbackURL
+			= makeGoogleAuthCallbackUrl(req.headers.host);
 		next();
 	},
 	passport.authenticate('google', { failureRedirect: '/' }),
