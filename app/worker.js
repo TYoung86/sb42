@@ -324,7 +324,7 @@ function serialize(data) {
 	return Buffer.from(cbor.encode(data));
 }
 function deserialize(data) {
-	return cbor.decode(data);
+	return cbor.decode(data.buffer);
 }
 const aDayInSeconds = 86400;
 app.use(session({
