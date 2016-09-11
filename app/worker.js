@@ -321,9 +321,11 @@ app.use((req,res,next) => {
 
 
 function serialize(data) {
+	console.log("Serialize", data);
 	return Buffer.from(cbor.encode(data));
 }
 function deserialize(data) {
+	console.log("Deserializing", data);
 	return cbor.decode(data.buffer);
 }
 const aDayInSeconds = 86400;
