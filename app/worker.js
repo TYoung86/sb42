@@ -234,12 +234,12 @@ function User(profile, accessToken, refreshToken, done) {
 	isUpdate = isUpdate && Object.keys(profile).length > 0;
 	console.log('User profile %s: %s', isUpdate ? 'update' : 'access',  id);
 	const now = new Date();
-	const updatedUser = profile ? {
+	const updatedUser = isUpdate ? {
 		accessToken,
 		refreshToken,
 		email: profile.email,
 		name: profile.name,
-		picture: profile.picture || ( profile._json && profile._json.picture ),
+		picture: profile.picture || ( profile._json && profile._json.image ),
 		modified: now
 	} : {};
 	const filePath = './users/'+id;
@@ -275,7 +275,10 @@ function User(profile, accessToken, refreshToken, done) {
 				console.log('Updating user profile for %s.', id);
 				pfs.writeFile(filePath,
 					serialize(Object.setPrototypeOf(user, null)),
-					err => done(err, user));
+					err => {
+						console.log('Updated user profile for %s.', id);
+						return done(err, user)
+					});
 			} else {
 				console.log('Accessed user profile for %s.', id);
 				var err = user instanceof Error ? user : null;
