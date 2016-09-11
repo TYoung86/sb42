@@ -285,12 +285,12 @@ function User(profile, accessToken, refreshToken, done) {
 		})
 		.catch(err => console.error("While retrieving user %s...\n%s", id, err.stack))
 }
-/*
+
 passport.serializeUser((user, done)=>{
 	console.log('Serializing user profile for %s.', user.id);
 	done(null, user.id)
 });
- */
+
 passport.deserializeUser((id, done)=>{
 	console.log('Deserializing user profile for %s.', id);
 	User(id).then((user) => {
