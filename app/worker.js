@@ -260,11 +260,15 @@ function User(profile, accessToken, refreshToken, done) {
 			Object.assign(
 				{created:now},
 				readUser,
+				{new:false},
 				updatedUser),
 			{id}))
-		.catch(err => {
-			return new Error(`User profile for ${id} does not exist.`);
-		})
+		.catch(err => Object.setPrototypeOf(
+				Object.assign(
+					{created:now},
+					{new:true},
+					updatedUser),
+				{id}))
 		.then(user => {
 			console.log('Resulting user profile for:', user);
 			if (isUpdate) {
